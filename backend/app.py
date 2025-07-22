@@ -13,6 +13,7 @@
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 from dotenv import load_dotenv
+from flask import send_from_directory
 import os
 
 # Import our organized services (NO USER SERVICES)
@@ -44,7 +45,11 @@ CORS(app, origins=["*"], supports_credentials=True)
 
 @app.route('/')
 def home():
-    return "🎵 YAIN Backend is running with Smart Genre Detection & Complete Music Diversity! 🎯🧠🌍"
+    return send_from_directory('../frontend', 'index.html')
+
+@app.route('/<path:filename>')
+def serve_static(filename):
+    return send_from_directory('../frontend', filename)
 
 @app.route('/trending')
 def get_trending():
