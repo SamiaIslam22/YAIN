@@ -61,31 +61,28 @@
         100% { background-position: 0% 50%; }
     }
 
-    /* Remove the broken transform CSS and use this instead: */
+/* Remove all zoom/transform and use responsive sizing: */
 body {
-    zoom: 0.8; /* Back to zoom - it works better */
-    min-width: 100vw; /* Ensure it fills viewport width */
-    min-height: 100vh; /* Ensure it fills viewport height */
+    zoom: 1; /* Reset zoom */
+    font-size: 14px; /* Smaller base font */
 }
 
-/* Make sure header is visible */
 .header {
-    position: relative;
-    z-index: 100;
-    width: 100%;
-    padding: 15px 30px;
+    padding: 12px 25px; /* Smaller padding */
 }
 
-/* Make containers fill more space */
+.logo {
+    font-size: 2.0em; /* Smaller logo */
+}
+
 .main-container {
-    max-width: none; /* Remove max-width limit */
-    width: 100%;
-    padding: 0 30px;
+    width: 100vw; /* Full viewport width */
+    max-width: none;
+    padding: 0 15px;
 }
 
-/* Adjust sidebar for better fit */
 .sidebar {
-    width: 320px;
+    width: 280px;
 }
 
     /* Floating particles background */
