@@ -61,29 +61,32 @@
         100% { background-position: 0% 50%; }
     }
 
-    body {
-    transform: scale(0.8);
-    transform-origin: top left;
-    width: 125%; /* Compensate for the 0.8 scale */
-    height: 125%; /* Compensate for the 0.8 scale */
-    overflow-x: hidden; /* Hide horizontal scroll */
+    /* Remove the broken transform CSS and use this instead: */
+body {
+    zoom: 0.8; /* Back to zoom - it works better */
+    min-width: 100vw; /* Ensure it fills viewport width */
+    min-height: 100vh; /* Ensure it fills viewport height */
+}
+
+/* Make sure header is visible */
+.header {
+    position: relative;
+    z-index: 100;
+    width: 100%;
+    padding: 15px 30px;
 }
 
 /* Make containers fill more space */
 .main-container {
-    max-width: 100vw; /* Use full viewport width */
+    max-width: none; /* Remove max-width limit */
+    width: 100%;
     padding: 0 30px;
 }
 
+/* Adjust sidebar for better fit */
 .sidebar {
-    width: 350px; /* Wider to compensate for scale */
+    width: 320px;
 }
-
-.chat-area {
-    flex: 1;
-    margin: 20px 0;
-}
-
 
     /* Floating particles background */
     body::before {
