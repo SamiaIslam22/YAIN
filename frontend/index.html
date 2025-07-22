@@ -1,0 +1,1411 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Yain - Your AI DJ with Attitude</title>
+    <style>
+    * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+    }
+    .footer-notice {
+        position: fixed;
+        bottom: 10px;
+        right: 20px;
+        text-align: right;
+        font-size: 0.75em;
+        font-weight: 600;
+        font-family: 'SF Pro Display', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+        background: linear-gradient(45deg, #4A90E2, #FF6B9D);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+        opacity: 0.8;
+        z-index: 999;
+        pointer-events: none;
+        line-height: 1.3;
+        }   
+
+    .footer-sub {
+        font-size: 0.85em;
+        font-weight: 900;
+        letter-spacing: 0.2px;
+        }
+    
+    @keyframes glowPulse {
+        0%, 100% {
+            text-shadow: 0 0 10px rgba(255, 255, 255, 0.1);
+        }
+        50% {
+            text-shadow: 0 0 20px rgba(255, 255, 255, 0.3);
+        }
+        }
+    body {
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Helvetica Neue', Arial, sans-serif;
+        background: linear-gradient(135deg, #0a0a0a 0%, #1a0a1a 25%, #0a1a1a 50%, #1a1a0a 75%, #0a0a0a 100%);
+        background-size: 400% 400%;
+        animation: gradientShift 15s ease infinite;
+        color: white;
+        height: 100vh;
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+        position: relative;
+    }
+
+    @keyframes gradientShift {
+        0% { background-position: 0% 50%; }
+        50% { background-position: 100% 50%; }
+        100% { background-position: 0% 50%; }
+    }
+
+    /* Floating particles background */
+    body::before {
+        content: '';
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background-image: 
+            radial-gradient(2px 2px at 20px 30px, rgba(74, 144, 226, 0.3), transparent),
+            radial-gradient(2px 2px at 40px 70px, rgba(255, 107, 157, 0.3), transparent),
+            radial-gradient(1px 1px at 90px 40px, rgba(74, 144, 226, 0.2), transparent),
+            radial-gradient(1px 1px at 130px 80px, rgba(255, 107, 157, 0.2), transparent);
+        background-repeat: repeat;
+        background-size: 200px 200px;
+        animation: float 20s linear infinite;
+        pointer-events: none;
+        z-index: 1;
+    }
+
+    @keyframes float {
+        0% { transform: translate(0, 0); }
+        100% { transform: translate(-200px, -200px); }
+    }
+    
+    /* Header */
+    .header {
+        background: rgba(15, 15, 15, 0.3);
+        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        padding: 25px 40px;
+        backdrop-filter: blur(20px) saturate(180%);
+        position: relative;
+        z-index: 100;
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+    }
+    
+    .header-content {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        max-width: 1400px;
+        margin: 0 auto;
+        position: relative;
+    }
+
+    /* Enhanced logo with animation */
+    .logo {
+        display: flex;
+        align-items: center;
+        gap: 15px;
+        font-size: 2.8em;
+        font-weight: 900;
+        font-family: 'SF Pro Display', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+        background: linear-gradient(45deg, #4A90E2, #FF6B9D, #4A90E2, #FF6B9D);
+        background-size: 300% 300%;
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+        animation: textGradient 3s ease infinite;
+        position: relative;
+        letter-spacing: -2px;
+        text-shadow: 0 0 30px rgba(74, 144, 226, 0.5);
+        filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.3));
+    }
+
+    @keyframes textGradient {
+        0% { background-position: 0% 50%; }
+        50% { background-position: 100% 50%; }
+        100% { background-position: 0% 50%; }
+    }
+
+    .logo::before {
+        content: '🎵';
+        filter: drop-shadow(0 0 10px rgba(74, 144, 226, 0.5));
+        animation: pulse 2s ease-in-out infinite;
+    }
+
+    @keyframes pulse {
+        0%, 100% { transform: scale(1); }
+        50% { transform: scale(1.1); }
+    }
+    
+    .tagline {
+        color: rgba(255, 255, 255, 0.8);
+        font-size: 0.38em;
+        font-weight: 600;
+        background: linear-gradient(45deg, rgba(74, 144, 226, 0.8), rgba(255, 107, 157, 0.8));
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+        letter-spacing: 1.5px;
+        text-shadow: 0 0 20px rgba(255, 107, 157, 0.3);
+        text-transform: uppercase;
+    }
+    
+    /* Main Content */
+    .main-container {
+        flex: 1;
+        display: flex;
+        height: calc(100vh - 100px);
+        max-width: 1400px;
+        margin: 0 auto;
+        width: 100%;
+        padding: 0 40px;
+        position: relative;
+        z-index: 10;
+    }
+    
+    /* Enhanced Sidebar */
+    .sidebar {
+        width: 320px;
+        background: rgba(20, 20, 20, 0.4);
+        border-radius: 20px;
+        padding: 25px;
+        margin: 20px 20px 20px 0;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        backdrop-filter: blur(20px) saturate(180%);
+        overflow-y: auto;
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+        position: relative;
+    }
+
+    .sidebar::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: linear-gradient(135deg, rgba(74, 144, 226, 0.1) 0%, rgba(255, 107, 157, 0.1) 100%);
+        border-radius: 20px;
+        opacity: 0.5;
+        pointer-events: none;
+    }
+    
+    .personalization-status {
+        background: linear-gradient(135deg, rgba(26, 26, 26, 0.8), rgba(42, 42, 42, 0.6));
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        border-radius: 15px;
+        padding: 20px;
+        margin-bottom: 25px;
+        text-align: center;
+        backdrop-filter: blur(10px);
+        position: relative;
+        overflow: hidden;
+    }
+
+    .personalization-status::before {
+        content: '';
+        position: absolute;
+        top: -50%;
+        left: -50%;
+        width: 200%;
+        height: 200%;
+        background: conic-gradient(from 0deg, transparent, rgba(74, 144, 226, 0.1), transparent);
+        animation: rotate 10s linear infinite;
+        pointer-events: none;
+    }
+
+    @keyframes rotate {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+    }
+    
+    .spotify-connect-btn {
+        background: linear-gradient(135deg, #0d4f1c 0%, #1a6b2f 25%, #267a3c 50%, #1a6b2f 75%, #0a3d15 100%);
+        color: white;
+        border: none;
+        padding: 15px 30px;
+        border-radius: 50px;
+        cursor: pointer;
+        font-weight: bold;
+        font-size: 14px;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        text-decoration: none;
+        display: inline-block;
+        margin: 10px 0;
+        width: 100%;
+        text-shadow: 0 2px 4px rgba(0,0,0,0.5);
+        box-shadow: 0 8px 25px rgba(13, 79, 28, 0.4);
+        background-size: 200% 200%;
+        animation: gradientShift 3s ease infinite;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .spotify-connect-btn::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: -100%;
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+        transition: left 0.5s;
+    }
+
+    .spotify-connect-btn:hover::before {
+        left: 100%;
+    }
+    
+    .spotify-connect-btn:hover {
+        background: linear-gradient(135deg, #1a6b2f 0%, #267a3c 25%, #32884a 50%, #1a6b2f 75%, #0d4f1c 100%);
+        transform: translateY(-3px) scale(1.02);
+        box-shadow: 0 15px 40px rgba(26, 107, 47, 0.6);
+    }
+    
+    .spotify-disconnect-btn {
+        background: linear-gradient(135deg, #8b0000 0%, #a52a2a 25%, #cd5c5c 50%, #a52a2a 75%, #660000 100%);
+        color: white;
+        border: none;
+        padding: 10px 20px;
+        border-radius: 25px;
+        cursor: pointer;
+        font-weight: bold;
+        font-size: 12px;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        margin-top: 10px;
+        text-shadow: 0 2px 4px rgba(0,0,0,0.5);
+        box-shadow: 0 6px 20px rgba(139, 0, 0, 0.4);
+    }
+    
+    .user-info {
+        background: linear-gradient(135deg, #1DB954, #1aa34a);
+        color: white;
+        padding: 15px;
+        border-radius: 12px;
+        font-size: 14px;
+        box-shadow: 0 4px 15px rgba(29, 185, 84, 0.3);
+    }
+    
+    .features-list, .memory-status {
+        background: rgba(30, 30, 30, 0.3);
+        border-radius: 15px;
+        padding: 20px;
+        margin-bottom: 20px;
+        backdrop-filter: blur(10px);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        position: relative;
+    }
+    
+    .features-list h3, .memory-status h3 {
+        background: linear-gradient(45deg, #4A90E2, #FF6B9D);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+        margin-bottom: 15px;
+        font-size: 1.1em;
+        font-weight: 600;
+    }
+    
+    .features-list ul {
+        list-style: none;
+        gap: 8px;
+        display: flex;
+        flex-direction: column;
+    }
+    
+    .features-list li {
+        color: rgba(255, 255, 255, 0.8);
+        font-size: 0.9em;
+        padding: 8px 0;
+        border-bottom: 1px solid rgba(255,255,255,0.1);
+        transition: color 0.3s ease;
+    }
+
+    .features-list li:hover {
+        color: rgba(74, 144, 226, 0.9);
+    }
+    
+    .memory-stats {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+    }
+    
+    .memory-stat {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 8px 0;
+        border-bottom: 1px solid rgba(255,255,255,0.1);
+        font-size: 0.9em;
+    }
+    
+    .memory-stat-label {
+        color: rgba(255, 255, 255, 0.7);
+    }
+    
+    .memory-stat-value {
+        background: linear-gradient(45deg, #4A90E2, #FF6B9D);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+        font-weight: bold;
+    }
+    
+    /* Enhanced Chat Area */
+    .chat-area {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        background: rgba(15, 15, 15, 0.4);
+        border-radius: 20px;
+        margin: 20px 0;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        backdrop-filter: blur(20px) saturate(180%);
+        overflow: hidden;
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+        position: relative;
+    }
+
+    .chat-area::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: linear-gradient(135deg, rgba(74, 144, 226, 0.05) 0%, rgba(255, 107, 157, 0.05) 100%);
+        pointer-events: none;
+    }
+    
+    .chat-header {
+        background: rgba(25, 25, 25, 0.6);
+        padding: 25px 30px;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        backdrop-filter: blur(15px);
+        position: relative;
+        z-index: 1;
+    }
+    
+    .chat-title {
+        font-size: 1.5em;
+        font-weight: 600;
+        margin-bottom: 8px;
+        background: linear-gradient(45deg, #4A90E2, #FF6B9D);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+    }
+    
+    .chat-subtitle {
+        color: rgba(255, 255, 255, 0.7);
+        font-size: 1em;
+        line-height: 1.4;
+    }
+    
+    .messages {
+        flex: 1;
+        overflow-y: auto;
+        padding: 30px;
+        display: flex;
+        flex-direction: column;
+        gap: 20px;
+        position: relative;
+        z-index: 1;
+    }
+    
+    .message {
+        padding: 20px 25px;
+        border-radius: 20px;
+        max-width: 85%;
+        word-wrap: break-word;
+        animation: fadeInUp 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+        position: relative;
+        backdrop-filter: blur(10px);
+    }
+    
+    @keyframes fadeInUp {
+        from { 
+            opacity: 0; 
+            transform: translateY(20px) scale(0.95); 
+        }
+        to { 
+            opacity: 1; 
+            transform: translateY(0) scale(1); 
+        }
+    }
+    
+    .user-message {
+        background: linear-gradient(135deg, rgba(74, 144, 226, 0.8), rgba(53, 122, 189, 0.8));
+        margin-left: auto;
+        border-bottom-right-radius: 8px;
+        box-shadow: 0 4px 15px rgba(74, 144, 226, 0.3);
+        border: 1px solid rgba(74, 144, 226, 0.3);
+    }
+    
+    .bot-message {
+        background: linear-gradient(135deg, rgba(42, 42, 42, 0.8), rgba(26, 26, 26, 0.8));
+        margin-right: auto;
+        border-bottom-left-radius: 8px;
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+    }
+    
+    .personalized-message {
+        background: linear-gradient(135deg, rgba(29, 185, 84, 0.8), rgba(26, 163, 74, 0.8));
+        border: 1px solid rgba(29, 185, 84, 0.4);
+        box-shadow: 0 4px 15px rgba(29, 185, 84, 0.3);
+    }
+    
+    .song-highlight {
+        background: linear-gradient(45deg, #4A90E2, #FF6B9D);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+        font-weight: 600;
+    }
+    
+    .song-card {
+        background: linear-gradient(135deg, rgba(42, 42, 42, 0.8), rgba(26, 26, 26, 0.8));
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        border-radius: 18px;
+        padding: 20px;
+        margin-top: 15px;
+        display: flex;
+        align-items: center;
+        gap: 20px;
+        transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        backdrop-filter: blur(15px);
+        position: relative;
+        overflow: hidden;
+    }
+
+    .song-card::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: -100%;
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(90deg, transparent, rgba(74, 144, 226, 0.1), transparent);
+        transition: left 0.5s ease;
+    }
+
+    .song-card:hover::before {
+        left: 100%;
+    }
+    
+    .song-card:hover {
+        transform: translateY(-5px) scale(1.02);
+        box-shadow: 0 15px 40px rgba(74, 144, 226, 0.4);
+        border-color: rgba(74, 144, 226, 0.6);
+    }
+    
+    .song-image {
+        width: 80px;
+        height: 80px;
+        border-radius: 15px;
+        object-fit: cover;
+        box-shadow: 0 8px 20px rgba(0, 0, 0, 0.4);
+        transition: transform 0.3s ease;
+    }
+
+    .song-card:hover .song-image {
+        transform: scale(1.05);
+    }
+    
+    .song-info {
+        flex: 1;
+    }
+    
+    .song-title {
+        font-weight: 600;
+        background: linear-gradient(45deg, #4A90E2, #FF6B9D);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+        margin-bottom: 6px;
+        font-size: 1.1em;
+    }
+    
+    .song-artist {
+        color: rgba(255, 255, 255, 0.7);
+        font-size: 0.95em;
+    }
+    
+    .music-buttons {
+        display: flex;
+        gap: 12px;
+        flex-wrap: wrap;
+    }
+    
+    .spotify-button, .youtube-button {
+        padding: 12px 24px;
+        border-radius: 50px;
+        cursor: pointer;
+        font-weight: 600;
+        text-decoration: none;
+        font-size: 13px;
+        transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        text-align: center;
+        display: block;
+        border: none;
+        color: white;
+        text-shadow: 0 2px 4px rgba(0,0,0,0.5);
+        position: relative;
+        overflow: hidden;
+    }
+
+    .spotify-button::before, .youtube-button::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: -100%;
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+        transition: left 0.5s;
+    }
+
+    .spotify-button:hover::before, .youtube-button:hover::before {
+        left: 100%;
+    }
+    
+    .spotify-button {
+        background: linear-gradient(135deg, #0d4f1c 0%, #1a6b2f 50%, #0a3d15 100%);
+        box-shadow: 0 8px 25px rgba(13, 79, 28, 0.4);
+    }
+    
+    .spotify-button:hover {
+        background: linear-gradient(135deg, #1a6b2f 0%, #32884a 50%, #0d4f1c 100%);
+        transform: translateY(-3px) scale(1.05);
+        box-shadow: 0 12px 35px rgba(26, 107, 47, 0.6);
+    }
+    
+    .youtube-button {
+        background: linear-gradient(135deg, #8b0000 0%, #cd5c5c 50%, #660000 100%);
+        box-shadow: 0 8px 25px rgba(139, 0, 0, 0.4);
+    }
+    
+    .youtube-button:hover {
+        background: linear-gradient(135deg, #a52a2a 0%, #dc143c 50%, #4d0000 100%);
+        transform: translateY(-3px) scale(1.05);
+        box-shadow: 0 12px 35px rgba(165, 42, 42, 0.6);
+    }
+    
+    /* Enhanced Input Area */
+    .input-area {
+        background: rgba(25, 25, 25, 0.6);
+        padding: 25px 30px;
+        border-top: 1px solid rgba(255, 255, 255, 0.1);
+        backdrop-filter: blur(15px);
+        position: relative;
+        z-index: 1;
+    }
+    
+    .input-container {
+        display: flex;
+        gap: 15px;
+        align-items: center;
+        max-width: 1000px;
+    }
+    
+    #messageInput {
+        flex: 1;
+        padding: 20px 25px;
+        border: 2px solid rgba(255, 255, 255, 0.2);
+        border-radius: 50px;
+        background: rgba(40, 40, 40, 0.6);
+        color: white;
+        font-size: 16px;
+        outline: none;
+        transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        backdrop-filter: blur(10px);
+    }
+    
+    #messageInput:focus {
+        border-color: rgba(74, 144, 226, 0.8);
+        background: rgba(50, 50, 50, 0.8);
+        box-shadow: 0 0 30px rgba(74, 144, 226, 0.3);
+        transform: scale(1.02);
+    }
+    
+    #messageInput::placeholder {
+        color: rgba(255, 255, 255, 0.5);
+    }
+    
+    #sendButton {
+        padding: 20px 40px;
+        background: linear-gradient(135deg, #4A90E2 0%, #5ba0f2 25%, #FF6B9D 50%, #ff7bb5 75%, #357ABD 100%);
+        color: white;
+        border: none;
+        border-radius: 50px;
+        cursor: pointer;
+        font-weight: 600;
+        font-size: 16px;
+        transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        min-width: 140px;
+        text-shadow: 0 2px 4px rgba(0,0,0,0.5);
+        box-shadow: 0 8px 25px rgba(74, 144, 226, 0.4);
+        background-size: 200% 200%;
+        animation: sendButtonGradient 5s ease infinite;
+        position: relative;
+        overflow: hidden;
+    }
+
+    #sendButton::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: -100%;
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+        transition: left 0.5s;
+    }
+
+    #sendButton:hover::before {
+        left: 100%;
+    }
+    
+    #sendButton:hover {
+        background: linear-gradient(135deg, #5ba0f2 0%, #6bb0ff 25%, #ff7bb5 50%, #ff8cc5 75%, #4080cd 100%);
+        transform: translateY(-4px) scale(1.05);
+        box-shadow: 0 15px 40px rgba(74, 144, 226, 0.6);
+    }
+    
+    #sendButton:active {
+        transform: translateY(-2px) scale(1.02);
+    }
+    
+    #sendButton:disabled {
+        opacity: 0.7;
+        cursor: not-allowed;
+        transform: none;
+    }
+    
+    @keyframes sendButtonGradient {
+        0% { background-position: 0% 50%; }
+        33% { background-position: 100% 25%; }
+        66% { background-position: 50% 100%; }
+        100% { background-position: 0% 50%; }
+    }
+    
+    /* Enhanced Scrollbar */
+    .messages::-webkit-scrollbar, .sidebar::-webkit-scrollbar {
+        width: 10px;
+    }
+    
+    .messages::-webkit-scrollbar-track, .sidebar::-webkit-scrollbar-track {
+        background: rgba(255, 255, 255, 0.1);
+        border-radius: 10px;
+    }
+    
+    .messages::-webkit-scrollbar-thumb, .sidebar::-webkit-scrollbar-thumb {
+        background: linear-gradient(45deg, #4A90E2, #FF6B9D);
+        border-radius: 10px;
+        box-shadow: 0 0 10px rgba(74, 144, 226, 0.5);
+    }
+    
+    /* Enhanced Cursor Trail Effect */
+    .cursor-trail {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100vw;
+        height: 100vh;
+        pointer-events: none;
+        z-index: 1000;
+        overflow: hidden;
+    }
+    
+    .cursor-trail svg {
+        width: 100%;
+        height: 100%;
+    }
+    
+    .trail-line {
+        fill: none;
+        stroke: url(#neonGradient);
+        stroke-width: 6;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+        filter: blur(0.5px) drop-shadow(0 0 15px #4A90E2) drop-shadow(0 0 25px #FF6B9D);
+        opacity: 0.9;
+        transition: opacity 0.4s ease;
+    }
+    
+    .trail-glow {
+        fill: none;
+        stroke: url(#neonGradient);
+        stroke-width: 12;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+        filter: blur(3px);
+        opacity: 0.3;
+    }
+    
+    /* Hide trail on mobile */
+    @media (max-width: 768px) {
+        .cursor-trail {
+            display: none;
+        }
+    }
+
+    /* Enhanced Responsive Design */
+    @media (max-width: 1200px) {
+        .main-container {
+            padding: 0 20px;
+        }
+        
+        .sidebar {
+            width: 280px;
+        }
+    }
+    
+    @media (max-width: 968px) {
+        .main-container {
+            flex-direction: column;
+        }
+        
+        .sidebar {
+            width: 100%;
+            margin: 10px 0;
+            order: 2;
+            max-height: 200px;
+        }
+        
+        .chat-area {
+            order: 1;
+            margin: 10px 0;
+        }
+    }
+    
+    @media (max-width: 768px) {
+        .header {
+            padding: 15px 20px;
+        }
+        
+        .main-container {
+            padding: 0 15px;
+        }
+        
+        .input-container {
+            flex-direction: column;
+            gap: 10px;
+        }
+        
+        #sendButton {
+            width: 100%;
+        }
+
+        .logo {
+            font-size: 2.2em;
+            font-weight: 900;
+            letter-spacing: -1px;
+        }
+
+        .tagline {
+            font-size: 0.42em;
+            font-weight: 600;
+            letter-spacing: 1px;
+        }
+    }
+</style>
+</head>
+<body>
+    <!-- Enhanced Cursor Trail -->
+    <div class="cursor-trail">
+        <svg>
+            <defs>
+                <linearGradient id="neonGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+                    <stop offset="0%" style="stop-color:#4A90E2;stop-opacity:0.2" />
+                    <stop offset="25%" style="stop-color:#FF6B9D;stop-opacity:0.7" />
+                    <stop offset="50%" style="stop-color:#4A90E2;stop-opacity:1" />
+                    <stop offset="75%" style="stop-color:#FF6B9D;stop-opacity:0.7" />
+                    <stop offset="100%" style="stop-color:#4A90E2;stop-opacity:0.2" />
+                </linearGradient>
+            </defs>
+            <path class="trail-glow" d=""></path>
+            <path class="trail-line" d=""></path>
+        </svg>
+    </div>
+    <div class="footer-notice">
+        🔐 YAIN by Samia Islam<br>
+        <span class="footer-sub">For demo use only — No commercial use allowed</span>
+    </div>
+    <!-- Enhanced Header -->
+    <div class="header">
+        <div class="header-content">
+            <div class="logo">
+                Yain
+                <span class="tagline">Your AI DJ with Attitude</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Container -->
+    <div class="main-container">
+        <!-- Enhanced Sidebar -->
+        <div class="sidebar">
+            <!-- Personalization Status -->
+            <div class="personalization-status" id="personalizationStatus">
+                <div id="spotifyStatus">
+                    <p>🎯 <strong>Connect your Spotify for personalized recommendations!</strong></p>
+                    <button class="spotify-connect-btn" onclick="connectSpotify()">
+                        🎵 Connect Spotify Account
+                    </button>
+                    <p style="font-size: 12px; color: #888; margin-top: 10px;">
+                        Get music suggestions based on your actual taste, not just trending songs!
+                    </p>
+                </div>
+            </div>
+
+            <!-- Memory Status -->
+            <div class="memory-status" id="memoryStatus">
+                <h3>🧠 Memory System</h3>
+                <div class="memory-stats" id="memoryStats">
+                    <div class="memory-stat">
+                        <span class="memory-stat-label">Songs Remembered:</span>
+                        <span class="memory-stat-value" id="songsRemembered">0</span>
+                    </div>
+                    <div class="memory-stat">
+                        <span class="memory-stat-label">Last Request:</span>
+                        <span class="memory-stat-value" id="lastRequestType">None</span>
+                    </div>
+                    <div class="memory-stat">
+                        <span class="memory-stat-label">Memory Active:</span>
+                        <span class="memory-stat-value" id="memoryActive">✅</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Features -->
+            <div class="features-list">
+                <h3>💅🏼 What I Can Do</h3>
+                <ul>
+                    <li>🎭 50+ mood detection</li>
+                    <li>🧠 Never repeat songs</li>
+                    <li>🎨 Spotify + YouTube links</li>
+                    <li>🎯 Perfect mood matching</li>
+                    <li>🌍 200+ song database</li>
+                    <li>🎪 Cheeky personality</li>
+                    <li>📱 Real-time discovery</li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- Enhanced Chat Area -->
+        <div class="chat-area">
+            <!-- Chat Header -->
+            <div class="chat-header">
+                <div class="chat-title">How are you feeling today?</div>
+                <div class="chat-subtitle">Tell me your mood and I'll find the perfect song for you! 🎵</div>
+            </div>
+
+            <!-- Messages -->
+            <div class="messages" id="messages">
+                <div class="message bot-message">
+                    Hey! I'm Yain 🎵 What's your emotional damage today?
+                </div>
+            </div>
+
+            <!-- Enhanced Input Area -->
+            <div class="input-area">
+                <div class="input-container">
+                    <input type="text" id="messageInput" placeholder="Type how you're feeling..." />
+                    <button id="sendButton">Send</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        const messagesDiv = document.getElementById('messages');
+        const messageInput = document.getElementById('messageInput');
+        const sendButton = document.getElementById('sendButton');
+        
+        // 🔧 CONFIGURATION - Change this for production
+        const CONFIG = {
+    API_BASE: window.location.hostname === 'localhost' 
+        ? 'http://localhost:5000' 
+        : 'https://your-app-name.railway.app'  // Update this after deployment
+};
+        
+        
+        // 🧠 MEMORY SYSTEM: Track ACTUAL returned songs, not AI suggestions
+        let suggestedSongs = [];
+        
+        // 🔐 PERSONALIZATION: Track user connection status
+        let isPersonalized = false;
+        let currentUser = null;
+        
+        // 📊 Memory statistics
+        let memoryStats = {
+            songsRemembered: 0,
+            lastRequestType: 'None',
+            memoryActive: true
+        };
+        
+        // Check if user is already connected on page load
+        checkUserStatus();
+        
+        async function checkUserStatus() {
+            try {
+                const response = await fetch(`${CONFIG.API_BASE}/user/profile`, {
+                    credentials: 'include'
+                });
+                if (response.ok) {
+                    const userData = await response.json();
+                    updatePersonalizationStatus(true, userData);
+                }
+            } catch (error) {
+                console.log('User not connected, using general mode');
+            }
+        }
+        
+        async function connectSpotify() {
+            try {
+                const response = await fetch(`${CONFIG.API_BASE}/auth/spotify`);
+                const data = await response.json();
+                
+                if (data.auth_url) {
+                    // Open Spotify auth in new window
+                    window.open(data.auth_url, 'spotify_auth', 'width=500,height=600');
+                    
+                    // Listen for auth completion
+                    const authCheck = setInterval(async () => {
+                        try {
+                            const statusResponse = await fetch(`${CONFIG.API_BASE}/user/profile`, {
+                                credentials: 'include'
+                            });
+                            if (statusResponse.ok) {
+                                const userData = await statusResponse.json();
+                                updatePersonalizationStatus(true, userData);
+                                clearInterval(authCheck);
+                                
+                                // Add success message
+                                addMessage("🎉 Spotify connected! I now know your music taste and will give you personalized recommendations!", false, null, null, true);
+                            }
+                        } catch (error) {
+                            // Still checking...
+                        }
+                    }, 2000);
+                    
+                    // Stop checking after 5 minutes
+                    setTimeout(() => clearInterval(authCheck), 300000);
+                }
+            } catch (error) {
+                console.error('Error connecting to Spotify:', error);
+                addMessage("Sorry, I had trouble connecting to Spotify. Please try again!", false);
+            }
+        }
+        
+        async function disconnectSpotify() {
+            try {
+                await fetch(`${CONFIG.API_BASE}/user/disconnect`, {
+                    credentials: 'include'
+                });
+                updatePersonalizationStatus(false, null);
+                addMessage("Spotify disconnected. I'll use general recommendations now.", false);
+            } catch (error) {
+                console.error('Error disconnecting Spotify:', error);
+            }
+        }
+        
+        function updatePersonalizationStatus(connected, userData = null) {
+            const statusDiv = document.getElementById('spotifyStatus');
+            isPersonalized = connected;
+            currentUser = userData;
+            
+            if (connected && userData) {
+                const topGenres = userData.preferences.top_genres.slice(0, 3).join(', ');
+                const topArtists = userData.preferences.favorite_artists.slice(0, 3).join(', ');
+                
+                statusDiv.innerHTML = `
+                    <div class="user-info">
+                        <p>🎵 <strong>Connected as ${userData.profile.display_name}</strong></p>
+                        <p style="font-size: 12px;">Top genres: ${topGenres}</p>
+                        <p style="font-size: 12px;">Favorite artists: ${topArtists}</p>
+                        <button class="spotify-disconnect-btn" onclick="disconnectSpotify()">Disconnect</button>
+                    </div>
+                `;
+            } else {
+                statusDiv.innerHTML = `
+                    <p>🎯 <strong>Connect your Spotify for personalized recommendations!</strong></p>
+                    <button class="spotify-connect-btn" onclick="connectSpotify()">
+                        🎵 Connect Spotify Account
+                    </button>
+                    <p style="font-size: 12px; color: #888; margin-top: 10px;">
+                        Get music suggestions based on your actual taste, not just trending songs!
+                    </p>
+                `;
+            }
+        }
+        
+        function updateMemoryDisplay() {
+            document.getElementById('songsRemembered').textContent = memoryStats.songsRemembered;
+            document.getElementById('lastRequestType').textContent = memoryStats.lastRequestType;
+            document.getElementById('memoryActive').textContent = memoryStats.memoryActive ? '✅' : '❌';
+        }
+        
+        // Replace your highlightSongs function in index.html with this fixed version:
+
+function highlightSongs(message) {
+    console.log("🎨 Highlighting songs in:", message);
+    
+    // Enhanced patterns to catch more song suggestion formats
+    const patterns = [
+        // "Try 'Song with "quotes" inside' by Artist" - handles nested quotes
+        /([Tt]ry)\s+['"]([^'"]*(?:"[^"]*"[^'"]*)*?)['"] (by) ([^.!?\n🎵🎶]+?)(?=[\s]*[.!?\n🎵🎶]|$)/gi,
+        
+        // "Try Song Name by Artist" - without quotes
+        /([Tt]ry)\s+([^'"][^"]*?) (by) ([^.!?\n🎵🎶]+?)(?=[\s]*[.!?\n🎵🎶]|$)/gi,
+        
+        // "'Song' by Artist" - standalone with quotes
+        /(?:^|[^a-zA-Z])(['"])([^'"]+?)\1\s+(by)\s+([^.!?\n🎵🎶]+?)(?=[\s]*[.!?\n🎵🎶]|$)/gi,
+        
+        // "Check out 'Song' by Artist"
+        /([Cc]heck out)\s+['"]([^'"]+?)['"] (by) ([^.!?\n🎵🎶]+?)(?=[\s]*[.!?\n🎵🎶]|$)/gi,
+        
+        // "Listen to 'Song' by Artist"
+        /([Ll]isten to)\s+['"]([^'"]+?)['"] (by) ([^.!?\n🎵🎶]+?)(?=[\s]*[.!?\n🎵🎶]|$)/gi,
+        
+        // "Go with 'Song' by Artist"
+        /([Gg]o with)\s+['"]([^'"]+?)['"] (by) ([^.!?\n🎵🎶]+?)(?=[\s]*[.!?\n🎵🎶]|$)/gi
+    ];
+    
+    let result = message;
+    let foundMatch = false;
+    
+    patterns.forEach((pattern, index) => {
+        const matches = [...result.matchAll(pattern)];
+        console.log(`🔍 Pattern ${index + 1} found ${matches.length} matches`);
+        
+        matches.forEach(match => {
+            console.log(`✅ Match found:`, match);
+            foundMatch = true;
+        });
+        
+        result = result.replace(pattern, (match, prefix, song, byWord, artist) => {
+            // Enhanced artist name cleanup
+            let cleanArtist = artist.trim();
+            
+            // Remove trailing punctuation and emojis
+            cleanArtist = cleanArtist.replace(/[.!?🎵🎶🇯🇲🇧🇩🇮🇳🌍–—,-]+.*$/, '');
+            cleanArtist = cleanArtist.replace(/\s+(it's|that's|sweet|reggae|perfection|vibes|music|hits|pure|total|absolute|epic|energy|feels|mood|guaranteed|instant|serious|major).*$/i, '');
+            cleanArtist = cleanArtist.trim();
+            
+            console.log(`🎨 Highlighting: "${song}" by "${cleanArtist}"`);
+            
+            return `${prefix} <span class="song-highlight">'${song}'</span> ${byWord} <span class="song-highlight">${cleanArtist}</span>`;
+        });
+    });
+    
+    if (!foundMatch) {
+        console.log("❌ No song patterns matched in:", message);
+    }
+    
+    return result;
+}
+        
+        function createSongCard(spotifyData, youtubeData) {
+            const songCard = document.createElement('div');
+            songCard.className = 'song-card';
+            
+            // Use Spotify data for main info, fallback to YouTube
+            const songInfo = spotifyData || youtubeData;
+            if (!songInfo) return null;
+            
+            const songName = spotifyData ? spotifyData.name : youtubeData.title;
+            const artistName = spotifyData ? spotifyData.artist : youtubeData.channel;
+            const albumInfo = spotifyData ? spotifyData.album : '';
+            const imageUrl = spotifyData ? spotifyData.image_url : youtubeData.thumbnail_url;
+            
+            songCard.innerHTML = `
+                ${imageUrl ? `<img src="${imageUrl}" alt="Album art" class="song-image">` : ''}
+                <div class="song-info">
+                    <div class="song-title">${songName}</div>
+                    <div class="song-artist">${artistName}${albumInfo ? ` • ${albumInfo}` : ''}</div>
+                </div>
+                <div class="music-buttons">
+                    ${spotifyData ? `<a href="${spotifyData.spotify_url}" target="_blank" class="spotify-button">🎵 Open in Spotify</a>` : ''}
+                    ${youtubeData ? `<a href="${youtubeData.youtube_url}" target="_blank" class="youtube-button">📺 Watch on YouTube</a>` : ''}
+                </div>
+            `;
+            
+            return songCard;
+        }
+        
+        function addMessage(message, isUser = false, spotifyData = null, youtubeData = null, isPersonalized = false) {
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${isUser ? 'user-message' : 'bot-message'}`;
+            
+            // 🔐 Add personalized styling if this was a personalized response
+            if (isPersonalized && !isUser) {
+                messageDiv.classList.add('personalized-message');
+            }
+            
+            if (!isUser) {
+                // Highlight song titles for bot messages
+                messageDiv.innerHTML = highlightSongs(message);
+                
+                // 🧠 CRITICAL FIX: Track ACTUAL returned song, not AI suggestion
+                if (spotifyData || youtubeData) {
+                    const actualSong = spotifyData 
+                        ? `'${spotifyData.name}' by ${spotifyData.artist}`
+                        : `'${youtubeData.title}' by ${youtubeData.channel}`;
+                        
+                    // Only add to memory if it's not already there
+                    if (!suggestedSongs.includes(actualSong)) {
+                        suggestedSongs.push(actualSong);
+                        console.log(`🎵 Remembered ACTUAL song: ${actualSong}`);
+                        console.log(`📚 Total songs remembered: ${suggestedSongs.length}`);
+                        
+                        // Update memory stats
+                        memoryStats.songsRemembered = suggestedSongs.length;
+                        updateMemoryDisplay();
+                    } else {
+                        console.log(`🔄 Song already in memory: ${actualSong}`);
+                    }
+                }
+                
+                // Add song card if we have Spotify or YouTube data
+                if (spotifyData || youtubeData) {
+                    const songCard = createSongCard(spotifyData, youtubeData);
+                    if (songCard) {
+                        messageDiv.appendChild(songCard);
+                    }
+                }
+            } else {
+                messageDiv.textContent = message;
+            }
+            
+            messagesDiv.appendChild(messageDiv);
+            messagesDiv.scrollTop = messagesDiv.scrollHeight;
+        }
+        
+        async function sendMessage() {
+            const message = messageInput.value.trim();
+            if (!message) return;
+            
+            addMessage(message, true);
+            messageInput.value = '';
+            
+            // Show loading state
+            sendButton.textContent = 'Sending...';
+            sendButton.disabled = true;
+            
+            try {
+                console.log(`🧠 Sending memory: ${suggestedSongs.length} songs`);
+                console.log(`🧠 Memory contents:`, suggestedSongs);
+                
+                // 🧠 MEMORY: Send previously suggested songs to backend
+                const response = await fetch(`${CONFIG.API_BASE}/chat`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ 
+                        message: message,
+                        suggested_songs: suggestedSongs  // 🧠 Send memory!
+                    }),
+                    credentials: 'include'  // 🔐 Include session cookies for personalization
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+                
+                const data = await response.json();
+                
+                // 🔐 Check if response was personalized
+                const responsePersonalized = data.personalized || false;
+                
+                // 📊 Update memory statistics
+                if (data.memory_stats) {
+                    memoryStats.lastRequestType = data.memory_stats.request_type || 'Unknown';
+                    memoryStats.memoryActive = data.memory_stats.memory_working !== false;
+                    updateMemoryDisplay();
+                    
+                    console.log('🧠 Memory stats from backend:', data.memory_stats);
+                }
+                
+                addMessage(
+                    data.response || 'Sorry, something went wrong!', 
+                    false, 
+                    data.spotify, 
+                    data.youtube, 
+                    responsePersonalized
+                );
+                
+            } catch (error) {
+                console.error('Chat error:', error);
+                addMessage(`Sorry, I had trouble connecting to the backend! Please make sure it's running on ${CONFIG.API_BASE}`, false);
+            } finally {
+                // Reset button state
+                sendButton.textContent = 'Send';
+                sendButton.disabled = false;
+            }
+        }
+        
+        // Event listeners
+        sendButton.addEventListener('click', sendMessage);
+        messageInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                sendMessage();
+            }
+        });
+
+        // Auto-focus input on load
+        messageInput.focus();
+        
+        // Initialize memory display
+        updateMemoryDisplay();
+
+        // 🌟 Enhanced Ultra Smooth Cursor Trail
+        class CursorTrail {
+            constructor() {
+                this.points = [];
+                this.maxPoints = 10;
+                this.trail = document.querySelector('.trail-line');
+                this.trailGlow = document.querySelector('.trail-glow');
+                this.mouse = { x: 0, y: 0 };
+                this.lastMouse = { x: 0, y: 0 };
+                this.smoothMouse = { x: 0, y: 0 };
+                this.isMoving = false;
+                
+                this.init();
+            }
+            
+            init() {
+                // Track mouse movement
+                document.addEventListener('mousemove', (e) => {
+                    this.mouse.x = e.clientX;
+                    this.mouse.y = e.clientY;
+                    this.isMoving = true;
+                });
+                
+                // Enhanced hide trail when mouse stops
+                let timeout;
+                document.addEventListener('mousemove', () => {
+                    clearTimeout(timeout);
+                    this.trail.style.opacity = '0.9';
+                    this.trailGlow.style.opacity = '0.3';
+                    timeout = setTimeout(() => {
+                        this.trail.style.opacity = '0';
+                        this.trailGlow.style.opacity = '0';
+                        this.points = [];
+                    }, 400);
+                });
+                
+                // Start animation loop
+                this.animate();
+            }
+            
+            updateSmoothMouse() {
+                const lerp = 0.6;
+                this.smoothMouse.x += (this.mouse.x - this.smoothMouse.x) * lerp;
+                this.smoothMouse.y += (this.mouse.y - this.smoothMouse.y) * lerp;
+            }
+            
+            updatePoints() {
+                this.updateSmoothMouse();
+                
+                const distance = Math.sqrt(
+                    Math.pow(this.smoothMouse.x - this.lastMouse.x, 2) + 
+                    Math.pow(this.smoothMouse.y - this.lastMouse.y, 2)
+                );
+                
+                if (distance > 1.2) {
+                    this.points.push({
+                        x: this.smoothMouse.x,
+                        y: this.smoothMouse.y,
+                        age: 0
+                    });
+                    
+                    this.lastMouse.x = this.smoothMouse.x;
+                    this.lastMouse.y = this.smoothMouse.y;
+                }
+                
+                if (this.points.length > this.maxPoints) {
+                    this.points.shift();
+                }
+                
+                this.points.forEach(point => {
+                    point.age += 1;
+                });
+            }
+            
+            createSilkySmoothPath(points) {
+                if (points.length < 2) return '';
+                if (points.length === 2) {
+                    return `M ${points[0].x} ${points[0].y} L ${points[1].x} ${points[1].y}`;
+                }
+                
+                let path = `M ${points[0].x} ${points[0].y}`;
+                
+                for (let i = 1; i < points.length - 1; i++) {
+                    const prev = points[i - 1];
+                    const curr = points[i];
+                    const next = points[i + 1];
+                    
+                    const tension = 0.2;
+                    
+                    const cp1x = curr.x - (next.x - prev.x) * tension;
+                    const cp1y = curr.y - (next.y - prev.y) * tension;
+                    const cp2x = curr.x + (next.x - prev.x) * tension;
+                    const cp2y = curr.y + (next.y - prev.y) * tension;
+                    
+                    if (i === 1) {
+                        path += ` C ${cp1x} ${cp1y} ${cp2x} ${cp2y} ${curr.x} ${curr.y}`;
+                    } else {
+                        path += ` S ${cp2x} ${cp2y} ${curr.x} ${curr.y}`;
+                    }
+                }
+                
+                const lastPoint = points[points.length - 1];
+                path += ` L ${lastPoint.x} ${lastPoint.y}`;
+                
+                return path;
+            }
+            
+            drawTrail() {
+                if (this.points.length < 2) return;
+                
+                const silkyPath = this.createSilkySmoothPath(this.points);
+                
+                this.trail.setAttribute('d', silkyPath);
+                this.trailGlow.setAttribute('d', silkyPath);
+                
+                const fadeOpacity = Math.min(1, this.points.length / this.maxPoints);
+                this.trail.style.opacity = (0.9 * fadeOpacity).toString();
+                this.trailGlow.style.opacity = (0.3 * fadeOpacity).toString();
+            }
+            
+            animate() {
+                this.updatePoints();
+                this.drawTrail();
+                requestAnimationFrame(() => this.animate());
+            }
+        }
+        
+        // Initialize enhanced cursor trail only on desktop
+        if (window.innerWidth > 768) {
+            new CursorTrail();
+        }
+        
+        // 🎵 Welcome message with system info
+        setTimeout(() => {
+            addMessage(`🎵 Drop your mood, I'll drop the beat`, false);
+        }, 1000);
+    </script>
+</body>
+</html>
