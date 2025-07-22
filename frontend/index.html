@@ -62,8 +62,27 @@
     }
 
     body {
-    zoom: 0.8; /* Makes everything 80% smaller */
-    }
+    transform: scale(0.8);
+    transform-origin: top left;
+    width: 125%; /* Compensate for the 0.8 scale */
+    height: 125%; /* Compensate for the 0.8 scale */
+    overflow-x: hidden; /* Hide horizontal scroll */
+}
+
+/* Make containers fill more space */
+.main-container {
+    max-width: 100vw; /* Use full viewport width */
+    padding: 0 30px;
+}
+
+.sidebar {
+    width: 350px; /* Wider to compensate for scale */
+}
+
+.chat-area {
+    flex: 1;
+    margin: 20px 0;
+}
 
 
     /* Floating particles background */
