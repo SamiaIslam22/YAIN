@@ -47,6 +47,13 @@ load_dotenv()
 app = Flask(__name__)
 CORS(app, origins=["*"], supports_credentials=True)
 app.secret_key = os.getenv('FLASK_SECRET_KEY', 'a0bd5d3d53829ba6afe0b193bff1ae3a58ca87e20aa78ffc71a5fb82033bd4ee')
+
+app.config['SESSION_COOKIE_SECURE'] = True  # You're on HTTPS
+app.config['SESSION_COOKIE_HTTPONLY'] = True
+app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
+app.config['SESSION_PERMANENT'] = False
+
+
 @app.route('/')
 def home():
     return send_from_directory('../frontend', 'index.html')
