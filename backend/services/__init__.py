@@ -37,9 +37,8 @@ from .youtube_service import (
     YOUTUBE_ENABLED
 )
 
-# DISABLED FOR NOW - Uncomment when ready to deploy with auth
-# from .user_service import (
-#     spotify_auth,
-#     create_user_profile,
-#     UserPreferenceManager
-# )
+from .user_service import (
+    spotify_auth,
+    create_user_profile,
+    UserPreferenceManager
+)

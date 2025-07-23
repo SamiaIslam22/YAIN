@@ -300,7 +300,13 @@ class UserPreferenceManager:
         return base_terms[:8]  # Return top 8 personalized search terms
 
 # 🎯 Initialize OAuth handler
-spotify_auth = SpotifyUserAuth()
+try:
+    spotify_auth = SpotifyUserAuth()
+    print("✅ Spotify auth handler initialized successfully")
+except Exception as e:
+    print(f"❌ Error initializing Spotify auth: {e}")
+    # Create a dummy handler so imports don't fail
+    spotify_auth = None
 
 def create_user_profile(access_token):
     """🔍 Create complete user profile from Spotify data"""
@@ -328,3 +334,4 @@ def create_user_profile(access_token):
     except Exception as e:
         print(f"❌ Error creating user profile: {e}")
         return None
+    
