@@ -34,7 +34,11 @@ from services import (
     validate_memory_system,
     # YouTube functions
     search_youtube_song, 
-    YOUTUBE_ENABLED
+    YOUTUBE_ENABLED,
+
+    spotify_auth,
+    create_user_profile,
+    UserPreferenceManager
 )
 
 # Load environment variables
@@ -42,7 +46,7 @@ load_dotenv()
 
 app = Flask(__name__)
 CORS(app, origins=["*"], supports_credentials=True)
-
+app.secret_key = os.getenv('FLASK_SECRET_KEY', 'a0bd5d3d53829ba6afe0b193bff1ae3a58ca87e20aa78ffc71a5fb82033bd4ee')
 @app.route('/')
 def home():
     return send_from_directory('../frontend', 'index.html')
@@ -151,10 +155,127 @@ def test_hindi():
         "results": results
     })
 
-# 🚫 REMOVED: All user/auth routes - using general mode only
+
 @app.route('/health')
 def health():
     return {"status": "healthy", "spotify": SPOTIFY_ENABLED, "youtube": YOUTUBE_ENABLED}
+
+# Add these routes to your app.py file (after your test routes, before /chat route)
+
+@app.route('/auth/spotify')
+def auth_spotify():
+    """Get Spotify authorization URL"""
+    try:
+        # Generate a unique user ID for this session
+        import uuid
+        from flask import session
+        
+        user_id = str(uuid.uuid4())
+        session['pending_user_id'] = user_id
+        
+        # Get auth URL
+        auth_url = spotify_auth.get_auth_url(user_id)
+        
+        if auth_url:
+            return jsonify({"auth_url": auth_url})
+        else:
+            return jsonify({"error": "Failed to create auth URL"}), 500
+            
+    except Exception as e:
+        print(f"❌ Auth error: {e}")
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/callback')
+def spotify_callback():
+    """Handle Spotify OAuth callback"""
+    try:
+        from flask import request, session, redirect
+        
+        code = request.args.get('code')
+        state = request.args.get('state')  # This is the user_id
+        error = request.args.get('error')
+        
+        if error:
+            return f"<html><body><h2>Authorization denied: {error}</h2><script>window.close();</script></body></html>"
+        
+        if not code or not state:
+            return "<html><body><h2>Missing authorization code</h2><script>window.close();</script></body></html>"
+        
+        # Get access token
+        token_info = spotify_auth.get_user_token(code, state)
+        
+        if not token_info:
+            return "<html><body><h2>Failed to get access token</h2><script>window.close();</script></body></html>"
+        
+        # Create user profile
+        access_token = token_info['access_token']
+        user_profile = create_user_profile(access_token)
+        
+        if user_profile:
+            # Store user info in session
+            session['user_id'] = user_profile['user_id']
+            session['access_token'] = access_token
+            session['connected'] = True
+            
+            print(f"✅ User connected: {user_profile['profile']['display_name']}")
+            
+            return """
+            <html>
+            <body>
+                <h2>✅ Successfully connected to Spotify!</h2>
+                <p>You can close this window and return to YAIN.</p>
+                <script>
+                    // Notify parent window and close
+                    if (window.opener) {
+                        window.opener.postMessage('spotify_connected', '*');
+                    }
+                    window.close();
+                </script>
+            </body>
+            </html>
+            """
+        else:
+            return "<html><body><h2>Failed to create user profile</h2><script>window.close();</script></body></html>"
+            
+    except Exception as e:
+        print(f"❌ Callback error: {e}")
+        return f"<html><body><h2>Error: {str(e)}</h2><script>window.close();</script></body></html>"
+
+@app.route('/user/profile')
+def get_user_profile():
+    """Get current user profile"""
+    try:
+        from flask import session
+        
+        user_id = session.get('user_id')
+        if not user_id:
+            return jsonify({"error": "Not connected"}), 401
+        
+        user_data = UserPreferenceManager.get_user_profile(user_id)
+        if user_data:
+            return jsonify(user_data)
+        else:
+            return jsonify({"error": "Profile not found"}), 404
+            
+    except Exception as e:
+        print(f"❌ Profile error: {e}")
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/user/disconnect', methods=['POST'])
+def disconnect_user():
+    """Disconnect user"""
+    try:
+        from flask import session
+        
+        # Clear session
+        session.clear()
+        
+        return jsonify({"message": "Disconnected successfully"})
+        
+    except Exception as e:
+        print(f"❌ Disconnect error: {e}")
+        return jsonify({"error": str(e)}), 500
+    
 @app.route('/chat', methods=['POST'])
 def chat():
     """🧠 MAIN CHAT ENDPOINT - NOW WITH SPECIFIC SONG + ARTIST SEARCH!"""
