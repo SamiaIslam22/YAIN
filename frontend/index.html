@@ -978,12 +978,6 @@ body {
         checkUserStatus();
         
         async function checkUserStatus() {
-    // Don't check if user just disconnected
-    if (window.skipStatusCheck) {
-        console.log('⏸️ Skipping status check - user just disconnected');
-        return false;
-    }
-    
     console.log('🔍 Checking if user is already connected...');
     try {
         const response = await fetch(`${CONFIG.API_BASE}/user/profile`, {
@@ -1076,12 +1070,6 @@ body {
         // Force update UI to disconnected state
         updatePersonalizationStatus(false, null);
         addMessage("Spotify disconnected. I'll use general recommendations now.", false);
-        
-        // IMPORTANT: Stop auto-checking for a few seconds
-        window.skipStatusCheck = true;
-        setTimeout(() => {
-            window.skipStatusCheck = false;
-        }, 5000); // Don't check status for 5 seconds
         
     } catch (error) {
         console.error('Error disconnecting Spotify:', error);
