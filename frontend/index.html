@@ -981,9 +981,9 @@ body {
     console.log('🔍 Checking if user is already connected...');
     try {
         const response = await fetch(`${CONFIG.API_BASE}/user/profile`, {
-            credentials: 'include',
+            credentials: 'include',  // ✅ IMPORTANT: Include credentials
             headers: {
-                'Cache-Control': 'no-cache'
+                'Cache-Control': 'no-cache'  // ✅ Prevent caching issues
             }
         });
         
@@ -992,15 +992,18 @@ body {
         if (response.ok) {
             const userData = await response.json();
             console.log('✅ User connected:', userData.profile.display_name);
+            console.log('📊 User data:', userData);
             
+            // Check if this is a new connection (wasn't connected before)
             const wasConnected = isPersonalized;
             updatePersonalizationStatus(true, userData);
             
+            // If this is a new connection, show success message
             if (!wasConnected) {
                 addMessage("🎉 Spotify connected! I now know your music taste and will give you personalized recommendations!", false, null, null, true);
             }
             
-            return true;
+            return true; // ✅ Return success status
         } else {
             console.log('👤 User not connected:', response.status);
             updatePersonalizationStatus(false, null);

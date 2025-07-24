@@ -387,21 +387,13 @@ def get_user_profile():
         return jsonify({"error": str(e)}), 500
 @app.route('/user/disconnect', methods=['POST'])
 def disconnect_user():
-    """Disconnect user - ENHANCED"""
+    """Disconnect user"""
     try:
         from flask import session
         
-        user_id = session.get('user_id')
-        if user_id:
-            print(f"🔌 Disconnecting user: {user_id}")
-            # Remove from memory storage
-            if user_id in user_profiles:
-                del user_profiles[user_id]
-        
-        # Clear ALL session data
+        # Clear session
         session.clear()
         
-        print("✅ User disconnected successfully")
         return jsonify({"message": "Disconnected successfully"})
         
     except Exception as e:
