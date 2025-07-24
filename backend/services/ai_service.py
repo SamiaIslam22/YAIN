@@ -1124,6 +1124,8 @@ Your response should:
 1. First, respond to what they said in a clever, funny, or encouraging way (like a friend would)
 2. Reference a song theme naturally in your conversation 
 3. Then suggest that specific song with "Try 'Song Name' by Artist Name"
+5. Be funny and nice, but not too long - keep it engaging!
+6. Keep it SHORT: Only 2-3 sentences MAX
 
 
 CREATIVE FREEDOM RULES:
@@ -1133,6 +1135,7 @@ CREATIVE FREEDOM RULES:
 - Make each response feel fresh and unique
 - Show personality through your word choice and energy
 - React genuinely to what they're telling you
+- Keep it SHORT: Only 2-3 sentences MAX
 
 WHAT THEY WANT: {user_request['genre_hint']}
 
@@ -1156,58 +1159,31 @@ Your conversational response (chat first, then suggest song):
 """
     
     try:
-        print("🤖 Sending prompt to AI...")
+        print("🤖 Sending CREATIVE prompt to AI...")
         response = model.generate_content(prompt)
         ai_text = response.text
-        print(f"✅ AI Response: {ai_text}")
+        print(f"✅ CREATIVE AI Response: {ai_text}")
         return ai_text
     except Exception as e:
         print(f"⚠️ AI Rate Limited or Failed: {e}")
         
-        # BETTER fallback with artist search handling
+        # THIS IS THE IMPORTANT PART - calls your helper functions!
         if user_request['type'] == 'artist_search':
             artist_name = user_request['artist_name']
             if available_songs:
+                return get_creative_fallback_response(user_request, available_songs).replace("Try", f"Okay {artist_name} fan, try")
+            else:
+                artist_responses = [
+                    f"Listen, I love {artist_name} too, but my database is being dramatic right now. Try searching directly on Spotify!",
+                    f"{artist_name} is iconic! Unfortunately my song collection is having commitment issues. Check Spotify directly!",
+                    f"We stan {artist_name}! But my database chose violence today. Hit up Spotify for the goods!",
+                    f"{artist_name} supremacy! My database is being messy though - try Spotify for their latest!"
+                ]
                 import random
-                random_song = random.choice(available_songs)
-                return f"Love {artist_name}! 🎤 Here's a great track: {random_song}"
-            else:
-                return f"I'd love to find some {artist_name} tracks, but I couldn't find any in my database right now. Try searching directly on Spotify!"
+                return random.choice(artist_responses)
         
-        # Existing fallback logic for other types...
-        if available_songs:
-            # Find a song not in suggested_songs
-            for song in available_songs:
-                is_duplicate = False
-                for suggested in suggested_songs:
-                    if any(word in suggested.lower() for word in song.lower().split() if len(word) > 3):
-                        is_duplicate = True
-                        break
-                
-                if not is_duplicate:
-                    return f"Great taste in {user_request['genre_hint']}! 🎵 Try {song} 🎵"
-            
-            import random
-            random_song = random.choice(available_songs)
-            return f"Something fresh! 🎵 Try {random_song} 🎵"
-        else:
-            # 🎭 PERSONALITY FALLBACKS - More conversational
-            if user_request['type'] == 'bengali':
-                return "Bengali vibes incoming! 🇧🇩 Those soulful melodies hit different! Try 'Ei Raat Tomar Amar' by Kishore Kumar!"
-            elif user_request['type'] == 'afrobeats':
-                return "Afrobeats energy! 🌍 Time for some serious African rhythms! Try 'Ye' by Burna Boy!"
-            elif user_request['type'] == 'tamil':
-                return "Tamil vibes activated! 🇮🇳 Kollywood magic coming your way! Try 'Vaathi Coming' by Anirudh!"
-            elif user_request['type'] == 'punjabi':
-                return "Punjabi power! 🇮🇳 Get ready for some bhangra beats! Try 'Laembadgini' by Diljit Dosanjh!"
-            elif user_request['type'] == 'hindi_bollywood':
-                return "Bollywood vibes incoming! 🇮🇳 Those Hindi tracks just hit different! Try 'Jai Ho' by A.R. Rahman!"
-            elif user_request['type'] == 'anime_japanese':
-                return "Anime feels activated! 🇯🇵 Time for some epic J-music! Try 'Unravel' by TK from Ling tosite sigure!"
-            elif user_request['type'] == 'kpop':
-                return "K-pop energy detected! 🇰🇷 Ready for some serious vibes? Try 'Dynamite' by BTS!"
-            else:
-                return f"You've got excellent taste! 🎵 This one's gonna make your day! Try 'Happy' by Pharrell Williams!"
+        # THIS LINE CALLS YOUR HELPER FUNCTION!
+        return get_creative_fallback_response(user_request, available_songs)
 
 def extract_song_from_response(ai_text):
     """🔧 UPDATED: Extract song from conversational AI responses - Better for personality!"""
@@ -1369,8 +1345,9 @@ AVAILABLE SONGS FOR THIS REQUEST:
 2. Show you understand their vibe 
 3. Build up the anticipation for your song choice
 4. Suggest ONE song from the available list: "Try 'Song Name' by Artist Name"
-5. Show you understand their vibe (maybe reference their taste if relevant)
-6. Be genuinely funny in your own unique way
+5. Be funny and nice, but not too long - keep it engaging!
+6. Keep it SHORT: Only 2-3 sentences MAX
+
 
 CREATIVE FREEDOM RULES:
 - Come up with your OWN witty responses (no copying examples!)
@@ -1379,6 +1356,9 @@ CREATIVE FREEDOM RULES:
 - Make each response feel fresh and unique
 - Show personality through your word choice and energy
 - React genuinely to what they're telling you
+- Keep it SHORT: Only 2-3 sentences MAX
+
+
 
 🧠 MEMORY: You've suggested {len(suggested_songs)} songs before - pick something COMPLETELY different!
 
@@ -1386,19 +1366,142 @@ Be yourself, be funny, be sassy, and absolutely nail this recommendation:
 """
     
     try:
-        print("🤖 Sending SUBTLE PERSONALIZED prompt to AI...")
+        print("🤖 Sending CREATIVE PERSONALIZED prompt to AI...")
         response = model.generate_content(prompt)
         ai_text = response.text
-        print(f"✅ SUBTLE PERSONALIZED AI Response: {ai_text}")
+        print(f"✅ CREATIVE PERSONALIZED AI Response: {ai_text}")
         return ai_text
     except Exception as e:
-        print(f"⚠️ Personalized AI failed, using fallback: {e}")
-        # Create a quick personalized fallback
+        print(f"⚠️ Personalized AI failed, using creative fallback: {e}")
+        
+        # THIS PART CALLS YOUR HELPER FUNCTIONS!
         if user_request['type'] == 'profile_request':
-            return f"Hey {display_name}! I know you from your Spotify - you're into {', '.join(top_genres[:3]) if top_genres else 'awesome music'} and love artists like {', '.join(favorite_artists[:3]) if favorite_artists else 'so many great ones'}! 🎵"
-        elif available_songs:
+            profile_responses = [
+                f"Hey {display_name}! Your Spotify tells me you're into {', '.join(top_genres[:3]) if top_genres else 'amazing music'} and you clearly have taste since you love {', '.join(favorite_artists[:2]) if favorite_artists else 'great artists'}! Your music personality is *chef's kiss* 🎵",
+                f"Listen {display_name}, I've been analyzing your taste and WOW! {', '.join(top_genres[:2]) if top_genres else 'Your genres'} plus {', '.join(favorite_artists[:2]) if favorite_artists else 'your artists'}? Immaculate vibes only! ✨",
+                f"Okay {display_name}, based on your Spotify I can tell you're cultured! {', '.join(top_genres[:2]) if top_genres else 'Your music taste'} and {', '.join(favorite_artists[:2]) if favorite_artists else 'those artists'} prove you've got main character energy! 💅"
+            ]
             import random
-            song = random.choice(available_songs)
-            return f"Hey {display_name}! This one's perfect for you right now. Try {song}"
+            return random.choice(profile_responses)
+        elif available_songs:
+            # THIS LINE CALLS YOUR HELPER FUNCTION!
+            response = get_creative_fallback_response(user_request, available_songs, display_name)
+            
+            # Add personalized touch if their taste matches
+            if top_genres and available_songs:
+                import random
+                song = random.choice(available_songs)
+                if any(genre.lower() in song.lower() for genre in top_genres[:3]):
+                    personal_touches = [
+                        f"This is SO your vibe based on your {top_genres[0]} obsession!",
+                        f"I see your {top_genres[0]} taste and I'm here for it!",
+                        f"Your {top_genres[0]} era is showing and I LOVE it!"
+                    ]
+                    return f"OH {display_name}! {random.choice(personal_touches)} {song}"
+            
+            return response
         else:
-            return f"Hey {display_name}! Let me find something perfect for your vibe..."
+            # THIS LINE CALLS YOUR HELPER FUNCTION!
+            return get_creative_fallback_response(user_request, [], display_name)
+        
+def get_creative_fallback_response(user_request, available_songs, display_name=None):
+    """Generate creative, varied fallback responses when AI fails - KEEP THE PERSONALITY!"""
+    import random
+    
+    # Random sassy openers
+    openers = [
+        "Okay bestie,", "Listen up,", "Alright alright,", "Oh honey,", 
+        "You know what?", "Here's the tea:", "Plot twist:", "Real talk:",
+        "Not to be dramatic but", "I'm about to change your life:",
+        "Your playlist is about to thank me:", "This is your moment:"
+    ]
+    
+    # Random confidence boosters
+    confidence = [
+        "this is about to be PERFECT", "you're gonna obsess over this",
+        "this one hits different", "absolute chef's kiss vibes",
+        "this is THE one", "trust me on this", "you'll thank me later",
+        "this is your new anthem", "prepare to be blessed",
+        "this is going straight to your favorites"
+    ]
+    
+    # Random song intros
+    song_intros = [
+        "Try", "Give", "Check out", "Listen to", "Go with", 
+        "Your ears need", "Time for", "Here's", "Meet your new obsession:",
+        "Introducing", "Say hello to", "Ready for"
+    ]
+    
+    if available_songs:
+        random_song = random.choice(available_songs)
+        opener = random.choice(openers)
+        boost = random.choice(confidence)
+        intro = random.choice(song_intros)
+        
+        # Add name occasionally if personalized
+        if display_name and random.choice([True, False]):
+            opener = f"{opener} {display_name},"
+        
+        return f"{opener} {boost}! {intro} {random_song}"
+    
+    # KEEP THE LONGER, FUNNIER NO-SONGS FALLBACKS!
+    no_songs_responses = [
+        "My database is having main character syndrome right now, but your taste is immaculate! Try 'As It Was' by Harry Styles while I get my life together! ✨",
+        "Plot twist: my song library decided to take a coffee break! But I KNOW you've got taste, so try 'Anti-Hero' by Taylor Swift! ☕",
+        "Not my database acting up when you need me most! Your vibe deserves better - try 'Flowers' by Miley Cyrus while I fix this mess! 🌸",
+        "Listen, my song collection is being dramatic, but I refuse to leave you hanging! Try 'Unholy' by Sam Smith while I sort this out! 😈",
+        "My database said 'not today' but your music taste said 'ALWAYS'! Go stream 'Bad Habit' by Steve Lacy while I handle business! 🎵"
+    ]
+    
+    return random.choice(no_songs_responses)
+
+def get_genre_reaction(genre_type):
+    """Get a creative reaction with personality based on genre type"""
+    import random
+    
+    reactions = {
+        'bengali': [
+            "Bengali music hits different! 🇧🇩 This one's about to transport you:",
+            "OH we're going Bengali? Prepare for pure soul music:",
+            "Bengali vibes incoming! Your heart is about to FEEL this:"
+        ],
+        'afrobeats': [
+            "Afrobeats energy! 🌍 Your body's about to move involuntarily:",
+            "African rhythms incoming! This one's pure fire:",
+            "Afrobeats time! Get ready for those unstoppable vibes:"
+        ],
+        'kpop': [
+            "K-pop perfection! 🇰🇷 This is about to be your new obsession:",
+            "Korean excellence incoming! Prepare to add this to every playlist:",
+            "K-pop magic! Your ears are about to be blessed:"
+        ],
+        'sad': [
+            "Alright, who hurt you? 😭 Let's feel these feelings together:",
+            "Sad hours activated. This one's perfect for the dramatic window stare:",
+            "Time for emotional damage! This track hits right in the feels:"
+        ],
+        'happy': [
+            "YES! We love this energy! ✨ Time to amplify those good vibes:",
+            "Happy vibes only! This one's pure sunshine:",
+            "Good mood music incoming! Your day is about to get even better:"
+        ],
+        'chill': [
+            "Chill mode activated 😌 This one's perfect for your vibe:",
+            "Relaxation station! This track is pure serenity:",
+            "Chill vibes incoming! Time to unwind with this one:"
+        ]
+    }
+    
+    if genre_type in reactions:
+        return random.choice(reactions[genre_type])
+    
+    # Default creative reactions with personality
+    default_reactions = [
+        "Your music taste is about to get an upgrade! 🎵",
+        "Prepare for audio perfection!",
+        "This one's about to change your whole playlist game:",
+        "Your ears are about to thank me:",
+        "Plot twist: this song is about to become your personality:"
+    ]
+    
+    return random.choice(default_reactions)
