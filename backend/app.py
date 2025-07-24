@@ -377,6 +377,7 @@ def get_user_profile():
         else:
             print(f"❌ Profile not found for user {user_id}")
             return jsonify({"error": "Profile not found"}), 404
+        
             
     except Exception as e:
         print(f"❌ Profile error: {e}")
@@ -400,7 +401,7 @@ def disconnect_user():
     
 @app.route('/chat', methods=['POST'])
 def chat():
-    """🧠 MAIN CHAT ENDPOINT - NOW WITH SPECIFIC SONG + ARTIST SEARCH!"""
+    """🧠 MAIN CHAT ENDPOINT - NOW WITH WORKING PERSONALIZATION + FALLBACK LOGIC!"""
     try:
         data = request.get_json()
         user_message = data.get('message', '')
@@ -414,22 +415,38 @@ def chat():
         memory_validation = validate_memory_system(suggested_songs)
         print(f"🔍 Memory validation: {memory_validation['status']} - {memory_validation['message']}")
         
-        # 🔐 CHECK FOR SPOTIFY PERSONALIZATION
+        # 🔐 CHECK FOR SPOTIFY PERSONALIZATION - ENHANCED WITH FALLBACK
         user_id = session.get('user_id')
         is_personalized = bool(user_id and session.get('connected', False))
+        user_data = None
 
         if is_personalized:
             print(f"🎯 PERSONALIZED MODE: User {user_id} connected")
             user_data = UserPreferenceManager.get_user_profile(user_id)
+
+            # 🔧 FIX #6: Fallback to session data if manager data lost
+            if not user_data and 'profile_data' in session:
+                print(f"🔄 User data not in manager, using session fallback")
+                user_data = session['profile_data']
+                
+                # Restore to manager for future requests
+                if user_data and 'profile' in user_data and 'preferences' in user_data:
+                    UserPreferenceManager.save_user_profile(
+                        user_id, 
+                        user_data['profile'], 
+                        user_data['preferences']
+                    )
+                    print(f"✅ Restored user data to manager from session")
     
             if user_data:
-                print(f"📊 User preferences loaded: {len(user_data['preferences']['top_genres'])} genres")
+                print(f"📊 User preferences loaded successfully!")
+                print(f"🎵 User's top genres: {user_data.get('preferences', {}).get('top_genres', [])[:3]}")
+                print(f"🎤 User's favorite artists: {user_data.get('preferences', {}).get('favorite_artists', [])[:3]}")
             else:
                 print(f"⚠️ User data not found, falling back to general mode")
                 is_personalized = False
         else:
             print(f"🌍 GENERAL MODE: No Spotify connection")
-            user_data = None
         
         # 🎯 ANALYZE what the user actually wants
         user_request = analyze_user_request(user_message)
@@ -450,25 +467,37 @@ def chat():
             if artist_id:
                 print(f"🎯 Using Spotify Artist ID: {artist_id}")
 
-        # 🎵 HANDLE GENRE/MOOD REQUESTS
+        # 🎵 HANDLE GENRE/MOOD REQUESTS - ENHANCED PERSONALIZATION
         elif user_request['type'] != 'general':
             # 🎯 PERSONALIZED SEARCH (if user is connected to Spotify)
-            if is_personalized:
+            if is_personalized and user_data:
                 print(f"🎯 PERSONALIZED SEARCH for {user_request['type']}")
                 
-                # Get personalized search terms based on user's actual Spotify taste
+                # 🔧 FIX: Get personalized search terms based on user's actual Spotify taste
                 personalized_terms = UserPreferenceManager.get_personalized_search_terms(
                     user_id, user_request['type']
                 )
                 
                 if personalized_terms:
                     print(f"🎵 Using personalized terms: {personalized_terms}")
-                    # Create enhanced user_request with personalized terms
+                    
+                    # 🔧 FIX: Create enhanced user_request with personalized terms at the FRONT
                     enhanced_request = user_request.copy()
+                    # Put personalized terms first, then add some original terms
                     enhanced_request['search_terms'] = personalized_terms + user_request['search_terms'][:3]
+                    
                     available_songs = search_specific_genre(enhanced_request)
                     print(f"🎯 Found {len(available_songs)} personalized songs")
+                    
+                    # 🔧 FIX: If personalized search yields few results, supplement with general search
+                    if len(available_songs) < 10:
+                        print(f"🔄 Supplementing with general search (only {len(available_songs)} personalized results)")
+                        general_songs = search_specific_genre(user_request)
+                        # Combine but keep personalized songs first
+                        available_songs = available_songs + general_songs
+                        print(f"🎵 Total after supplementing: {len(available_songs)} songs")
                 else:
+                    print(f"⚠️ No personalized terms generated, using general search")
                     # Fallback to regular genre search
                     available_songs = search_specific_genre(user_request)
                     print(f"🌍 Personalized fallback: Found {len(available_songs)} songs for {user_request['type']}")
@@ -499,15 +528,17 @@ def chat():
         if filtered_count == 0:
             print(f"⚠️ No songs available after memory filtering!")
         
-        # 🤖 Generate AI response
+        # 🤖 Generate AI response - ENHANCED PERSONALIZATION
         print(f"🤖 Generating AI response...")
         
-        # NEW: Pass user data to AI for personalized responses
+        # 🔧 FIX: Ensure we pass user data for personalized responses
         if is_personalized and user_data:
+            print(f"🎯 Using PERSONALIZED AI response")
             ai_text = generate_ai_response_personalized(
                 user_message, user_request, available_songs, suggested_songs, user_data
             )
         else:
+            print(f"🌍 Using GENERAL AI response")
             ai_text = generate_ai_response(user_message, user_request, available_songs, suggested_songs)
         
         print(f"✅ AI response: {ai_text}")
@@ -609,20 +640,25 @@ def chat():
             "spotify": spotify_data,
             "youtube": youtube_data,
             "memory_stats": memory_stats,
-            "personalized": is_personalized,  # ✅ NOW SHOWS TRUE when Spotify connected
+            "personalized": is_personalized,  # ✅ Shows TRUE when Spotify connected
             "user_id": user_id if is_personalized else None,  # ✅ Shows actual user ID
             
-            # 🆕 ADD: User's actual music preferences when connected
+            # 🆕 ENHANCED: User's actual music preferences when connected
             "user_preferences": {
                 "display_name": user_data['profile']['display_name'] if is_personalized and user_data else None,
                 "top_genres": user_data['preferences']['top_genres'][:5] if is_personalized and user_data else [],
                 "favorite_artists": user_data['preferences']['favorite_artists'][:5] if is_personalized and user_data else [],
-                "personalization_active": is_personalized
+                "personalization_active": is_personalized,
+                "personalized_search_used": bool(is_personalized and user_data),  # 🆕 Track if personalized search was used
+                "fallback_used": bool(is_personalized and 'profile_data' in session and not UserPreferenceManager.get_user_profile(user_id))  # 🆕 Track fallback usage
             } if is_personalized else None
         }
         
         print(f"✅ Response ready - Spotify: {bool(spotify_data)}, YouTube: {bool(youtube_data)}")
         print(f"🧠 Memory system working: {memory_stats['memory_working']}")
+        print(f"🎯 Personalization active: {is_personalized}")
+        if is_personalized and user_data:
+            print(f"🎵 User's taste: {user_data['preferences']['top_genres'][:2]} genres, {user_data['preferences']['favorite_artists'][:2]} artists")
         print(f"🎵 ===== CHAT REQUEST COMPLETE =====\n")
         
         return jsonify(response_data)

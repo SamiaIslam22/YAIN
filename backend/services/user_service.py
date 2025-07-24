@@ -9,7 +9,6 @@
 # This module handles user authentication with Spotify, profile creation,
 # and music preference analysis.
 
-
 import spotipy
 from spotipy.oauth2 import SpotifyOAuth
 import os
@@ -34,11 +33,18 @@ user_profiles = {}
 class SpotifyUserAuth:
     """🔐 Handle Spotify OAuth and user authentication"""
     
-    def __init__(self):
-        self.client_id = os.getenv('SPOTIFY_CLIENT_ID')
-        self.client_secret = os.getenv('SPOTIFY_CLIENT_SECRET')
-        self.redirect_uri = os.getenv('SPOTIFY_REDIRECT_URI', 'http://localhost:8080/callback')
-        
+    # In user_service.py - CORRECT
+def __init__(self):
+    self.client_id = os.getenv('SPOTIFY_CLIENT_ID')
+    self.client_secret = os.getenv('SPOTIFY_CLIENT_SECRET')
+    
+    # 🔧 FIX: Correct redirect URI for both dev and production
+    if os.getenv('ENVIRONMENT') == 'production' or 'render.com' in os.getenv('RENDER_EXTERNAL_URL', ''):
+        self.redirect_uri = 'https://yain.onrender.com/callback'
+    else:
+        self.redirect_uri = 'http://localhost:5000/callback'  # Port 5000, not 8080
+    
+    print(f"🔗 Using redirect URI: {self.redirect_uri}")
     def get_auth_url(self, user_id):
         """Get Spotify authorization URL for user"""
         try:
@@ -245,20 +251,30 @@ class UserPreferenceManager:
     @staticmethod
     def save_user_profile(user_id, profile_data, music_preferences):
         """Save user profile and music preferences"""
+        # 🔧 FIX 1: Use consistent naming - 'preferences' not 'music_preferences'
         user_profiles[user_id] = {
             'profile': profile_data,
-            'music_preferences': music_preferences,
+            'preferences': music_preferences,  # ✅ Fixed: consistent naming
             'last_updated': datetime.now().isoformat(),
             'song_suggestions_history': []  # Track what we've suggested
         }
         
         print(f"💾 Saved profile for user {user_id}")
+        print(f"🎵 Top genres: {music_preferences.get('top_genres', [])[:3]}")
+        print(f"🎤 Favorite artists: {music_preferences.get('favorite_artists', [])[:3]}")
         return True
     
     @staticmethod
     def get_user_profile(user_id):
         """Get user profile and preferences"""
-        return user_profiles.get(user_id)
+        user_data = user_profiles.get(user_id)
+        if user_data:
+            print(f"📊 Retrieved profile for {user_id}")
+            print(f"🎵 Genres available: {len(user_data.get('preferences', {}).get('top_genres', []))}")
+            print(f"🎤 Artists available: {len(user_data.get('preferences', {}).get('favorite_artists', []))}")
+        else:
+            print(f"❌ No profile found for user {user_id}")
+        return user_data
     
     @staticmethod
     def update_suggestion_history(user_id, suggested_song):
@@ -275,20 +291,30 @@ class UserPreferenceManager:
         user_data = user_profiles.get(user_id)
         
         if not user_data:
+            print(f"❌ No user data found for personalized search: {user_id}")
             return None
         
-        preferences = user_data['music_preferences']
+        # 🔧 FIX 2: Use correct data structure key
+        preferences = user_data.get('preferences', {})  # ✅ Fixed: was 'music_preferences'
+        
+        if not preferences:
+            print(f"❌ No preferences found for user {user_id}")
+            return None
         
         # Base search terms from emotion
         base_terms = []
         
         # Add user's favorite genres
         top_genres = preferences.get('top_genres', [])[:5]
+        print(f"🎭 User's top genres for {emotion_type}: {top_genres}")
+        
         for genre in top_genres:
             base_terms.append(f"{emotion_type} {genre}")
         
         # Add user's favorite artists
         top_artists = preferences.get('favorite_artists', [])[:3]
+        print(f"🎤 User's top artists for {emotion_type}: {top_artists}")
+        
         for artist in top_artists:
             base_terms.append(f"songs like {artist}")
         
@@ -297,6 +323,7 @@ class UserPreferenceManager:
             main_genre = top_genres[0] if top_genres else 'pop'
             base_terms.append(f"{emotion_type} {main_genre} music")
         
+        print(f"🎯 Generated {len(base_terms)} personalized search terms: {base_terms}")
         return base_terms[:8]  # Return top 8 personalized search terms
 
 # 🎯 Initialize OAuth handler
@@ -316,22 +343,26 @@ def create_user_profile(access_token):
         # Get basic profile
         profile_data = analyzer.get_user_profile()
         if not profile_data:
+            print("❌ Failed to get profile data")
             return None
         
         # Analyze music preferences
         music_preferences = analyzer.analyze_music_preferences()
+        if not music_preferences:
+            print("❌ Failed to analyze music preferences")
+            return None
         
         # Save everything
         user_id = profile_data['id']
         UserPreferenceManager.save_user_profile(user_id, profile_data, music_preferences)
         
+        # 🔧 FIX 3: Return consistent structure for immediate use
         return {
             'user_id': user_id,
             'profile': profile_data,
-            'preferences': music_preferences
+            'preferences': music_preferences  # ✅ Fixed: consistent with storage
         }
         
     except Exception as e:
         print(f"❌ Error creating user profile: {e}")
         return None
-    
