@@ -15,6 +15,7 @@ from flask_cors import CORS
 from dotenv import load_dotenv
 from flask import send_from_directory
 from flask import session
+from services.user_service import user_profiles
 import os
 
 # Import our organized services (NO USER SERVICES)
@@ -386,19 +387,26 @@ def get_user_profile():
         return jsonify({"error": str(e)}), 500
 @app.route('/user/disconnect', methods=['POST'])
 def disconnect_user():
-    """Disconnect user"""
+    """Disconnect user - ENHANCED"""
     try:
         from flask import session
         
-        # Clear session
+        user_id = session.get('user_id')
+        if user_id:
+            print(f"🔌 Disconnecting user: {user_id}")
+            # Remove from memory storage
+            if user_id in user_profiles:
+                del user_profiles[user_id]
+        
+        # Clear ALL session data
         session.clear()
         
+        print("✅ User disconnected successfully")
         return jsonify({"message": "Disconnected successfully"})
         
     except Exception as e:
         print(f"❌ Disconnect error: {e}")
         return jsonify({"error": str(e)}), 500
-    
 @app.route('/chat', methods=['POST'])
 def chat():
     """🧠 MAIN CHAT ENDPOINT - NOW WITH WORKING PERSONALIZATION + FALLBACK LOGIC!"""
