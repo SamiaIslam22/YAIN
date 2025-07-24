@@ -45,14 +45,32 @@ from services import (
 load_dotenv()
 
 app = Flask(__name__)
-CORS(app, origins=["*"], supports_credentials=True)
+CORS(app, 
+     origins=["http://localhost:3000", "https://yain.onrender.com", "http://localhost:5000", "http://127.0.0.1:5000"], 
+     supports_credentials=True,
+     allow_headers=["Content-Type", "Authorization", "Cache-Control"],
+     methods=["GET", "POST", "OPTIONS"])
+
 app.secret_key = os.getenv('FLASK_SECRET_KEY', 'a0bd5d3d53829ba6afe0b193bff1ae3a58ca87e20aa78ffc71a5fb82033bd4ee')
 
-app.config['SESSION_COOKIE_SECURE'] = True  # You're on HTTPS
-app.config['SESSION_COOKIE_HTTPONLY'] = True
-app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
-app.config['SESSION_PERMANENT'] = False
+if os.getenv('ENVIRONMENT') == 'production' or 'render.com' in os.getenv('RENDER_EXTERNAL_URL', ''):
+    # Production settings (HTTPS required)
+    app.config['SESSION_COOKIE_SECURE'] = True
+    app.config['SESSION_COOKIE_HTTPONLY'] = True
+    app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
+    app.config['SESSION_PERMANENT'] = True  # ✅ Changed to True
+    print("🔒 Production session config loaded (HTTPS required)")
+else:
+    # Development settings (works with HTTP)
+    app.config['SESSION_COOKIE_SECURE'] = False  # Allow HTTP for local dev
+    app.config['SESSION_COOKIE_HTTPONLY'] = True
+    app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
+    app.config['SESSION_PERMANENT'] = True  # ✅ Changed to True
+    print("🛠️ Development session config loaded (HTTP allowed)")
 
+# Session lifetime - this will now actually work
+from datetime import timedelta
+app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(hours=24) 
 
 @app.route('/')
 def home():
@@ -194,7 +212,7 @@ def auth_spotify():
 
 @app.route('/callback')
 def spotify_callback():
-    """Handle Spotify OAuth callback"""
+    """Handle Spotify OAuth callback - IMPROVED VERSION"""
     try:
         from flask import request, session, redirect
         
@@ -202,19 +220,62 @@ def spotify_callback():
         state = request.args.get('state')  # This is the user_id
         error = request.args.get('error')
         
+        print(f"📥 Callback received - Code: {bool(code)}, State: {state}, Error: {error}")
+        
         if error:
-            return f"<html><body><h2>Authorization denied: {error}</h2><script>window.close();</script></body></html>"
+            print(f"❌ Authorization error: {error}")
+            return f"""
+            <html>
+            <body style="font-family: system-ui; text-align: center; padding: 40px; background: #0a0a0a; color: white;">
+                <h2>❌ Authorization denied: {error}</h2>
+                <script>
+                    if (window.opener) {{
+                        window.opener.postMessage({{type: 'spotify_error', error: '{error}'}}, '*');
+                    }}
+                    window.close();
+                </script>
+            </body>
+            </html>
+            """
         
         if not code or not state:
-            return "<html><body><h2>Missing authorization code</h2><script>window.close();</script></body></html>"
+            print("❌ Missing authorization code or state")
+            return """
+            <html>
+            <body style="font-family: system-ui; text-align: center; padding: 40px; background: #0a0a0a; color: white;">
+                <h2>❌ Missing authorization code</h2>
+                <script>
+                    if (window.opener) {
+                        window.opener.postMessage({type: 'spotify_error', error: 'missing_code'}, '*');
+                    }
+                    window.close();
+                </script>
+            </body>
+            </html>
+            """
         
         # Get access token
+        print(f"🔄 Getting access token for user {state}...")
         token_info = spotify_auth.get_user_token(code, state)
         
         if not token_info:
-            return "<html><body><h2>Failed to get access token</h2><script>window.close();</script></body></html>"
+            print("❌ Failed to get access token")
+            return """
+            <html>
+            <body style="font-family: system-ui; text-align: center; padding: 40px; background: #0a0a0a; color: white;">
+                <h2>❌ Failed to get access token</h2>
+                <script>
+                    if (window.opener) {
+                        window.opener.postMessage({type: 'spotify_error', error: 'token_failed'}, '*');
+                    }
+                    window.close();
+                </script>
+            </body>
+            </html>
+            """
         
         # Create user profile
+        print(f"👤 Creating user profile...")
         access_token = token_info['access_token']
         user_profile = create_user_profile(access_token)
         
@@ -223,51 +284,103 @@ def spotify_callback():
             session['user_id'] = user_profile['user_id']
             session['access_token'] = access_token
             session['connected'] = True
+            session['profile_data'] = user_profile
+            session.permanent = True
             
-            print(f"✅ User connected: {user_profile['profile']['display_name']}")
+            print(f"✅ User connected successfully: {user_profile['profile']['display_name']}")
             
+            return f"""
+            <html>
+            <head><title>Spotify Connected</title></head>
+            <body style="font-family: system-ui; text-align: center; padding: 40px; background: linear-gradient(135deg, #0a0a0a 0%, #1a0a1a 50%, #0a0a0a 100%); color: white; margin: 0;">
+                <h2 style="color: #1DB954;">✅ Successfully connected to Spotify!</h2>
+                <p>Welcome, <strong>{user_profile['profile']['display_name']}</strong>!</p>
+                <p>You can close this window and return to YAIN.</p>
+                <p style="font-size: 12px; opacity: 0.7; margin-top: 30px;">Window will close automatically in 3 seconds...</p>
+                <script>
+                    if (window.opener) {{
+                        console.log('📡 Sending success message to parent window');
+                        window.opener.postMessage({{
+                            type: 'spotify_success',
+                            user: {{
+                                id: '{user_profile['user_id']}',
+                                name: '{user_profile['profile']['display_name']}'
+                            }}
+                        }}, '*');
+                    }}
+                    setTimeout(() => {{ window.close(); }}, 3000);
+                </script>
+            </body>
+            </html>
+            """
+        else:
+            print("❌ Failed to create user profile")
             return """
             <html>
-            <body>
-                <h2>✅ Successfully connected to Spotify!</h2>
-                <p>You can close this window and return to YAIN.</p>
+            <body style="font-family: system-ui; text-align: center; padding: 40px; background: #0a0a0a; color: white;">
+                <h2>❌ Failed to create user profile</h2>
                 <script>
-                    // Notify parent window and close
                     if (window.opener) {
-                        window.opener.postMessage('spotify_connected', '*');
+                        window.opener.postMessage({type: 'spotify_error', error: 'profile_failed'}, '*');
                     }
                     window.close();
                 </script>
             </body>
             </html>
             """
-        else:
-            return "<html><body><h2>Failed to create user profile</h2><script>window.close();</script></body></html>"
             
     except Exception as e:
         print(f"❌ Callback error: {e}")
-        return f"<html><body><h2>Error: {str(e)}</h2><script>window.close();</script></body></html>"
-
+        import traceback
+        traceback.print_exc()
+        return f"""
+        <html>
+        <body style="font-family: system-ui; text-align: center; padding: 40px; background: #0a0a0a; color: white;">
+            <h2>❌ Error: {str(e)}</h2>
+            <script>
+                if (window.opener) {{
+                    window.opener.postMessage({{type: 'spotify_error', error: 'server_error'}}, '*');
+                }}
+                window.close();
+            </script>
+        </body>
+        </html>
+        """
 @app.route('/user/profile')
 def get_user_profile():
-    """Get current user profile"""
+    """Get current user profile - IMPROVED VERSION"""
     try:
         from flask import session
         
+        print(f"🔍 Profile request - Session data: {dict(session)}")
+        
         user_id = session.get('user_id')
-        if not user_id:
+        connected = session.get('connected', False)
+        
+        if not user_id or not connected:
+            print(f"❌ Not connected - user_id: {user_id}, connected: {connected}")
             return jsonify({"error": "Not connected"}), 401
         
+        # Try to get from session first (faster)
+        if 'profile_data' in session:
+            print(f"⚡ Returning cached profile data for {user_id}")
+            return jsonify(session['profile_data'])
+        
+        # Fallback: get from storage
         user_data = UserPreferenceManager.get_user_profile(user_id)
         if user_data:
+            print(f"💾 Returning stored profile data for {user_id}")
+            session['profile_data'] = user_data
             return jsonify(user_data)
         else:
+            print(f"❌ Profile not found for user {user_id}")
             return jsonify({"error": "Profile not found"}), 404
             
     except Exception as e:
         print(f"❌ Profile error: {e}")
+        import traceback
+        traceback.print_exc()
         return jsonify({"error": str(e)}), 500
-
 @app.route('/user/disconnect', methods=['POST'])
 def disconnect_user():
     """Disconnect user"""

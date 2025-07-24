@@ -981,14 +981,18 @@ body {
     console.log('🔍 Checking if user is already connected...');
     try {
         const response = await fetch(`${CONFIG.API_BASE}/user/profile`, {
-            credentials: 'include'
+            credentials: 'include',  // ✅ IMPORTANT: Include credentials
+            headers: {
+                'Cache-Control': 'no-cache'  // ✅ Prevent caching issues
+            }
         });
         
-        console.log('📊 User check response:', response.status);
+        console.log('📊 User check response:', response.status, response.statusText);
         
         if (response.ok) {
             const userData = await response.json();
             console.log('✅ User connected:', userData.profile.display_name);
+            console.log('📊 User data:', userData);
             
             // Check if this is a new connection (wasn't connected before)
             const wasConnected = isPersonalized;
@@ -998,43 +1002,92 @@ body {
             if (!wasConnected) {
                 addMessage("🎉 Spotify connected! I now know your music taste and will give you personalized recommendations!", false, null, null, true);
             }
+            
+            return true; // ✅ Return success status
         } else {
-            console.log('👤 User not connected');
+            console.log('👤 User not connected:', response.status);
             updatePersonalizationStatus(false, null);
+            return false;
         }
     } catch (error) {
         console.log('❌ Error checking user status:', error);
+        return false;
     }
 }
+
         
         async function connectSpotify() {
     console.log('🎵 Starting Spotify connection...');
     
     try {
-        const response = await fetch(`${CONFIG.API_BASE}/auth/spotify`);
+        const response = await fetch(`${CONFIG.API_BASE}/auth/spotify`, {
+            credentials: 'include'
+        });
         const data = await response.json();
         
         if (data.auth_url) {
-            // Open Spotify auth in new window
-            const authWindow = window.open(data.auth_url, 'spotify_auth', 'width=500,height=600');
+            // Show loading message
+            addMessage("🔄 Opening Spotify authorization...", false);
             
-            // Simple approach: Check every 1 second if window closed
-            const checkClosed = setInterval(() => {
-                if (authWindow.closed) {
-                    console.log('🪟 Auth window closed, checking status...');
+            // Open Spotify auth in new window
+            const authWindow = window.open(
+                data.auth_url, 
+                'spotify_auth', 
+                'width=500,height=600,scrollbars=yes,resizable=yes'
+            );
+            
+            if (!authWindow) {
+                addMessage("❌ Popup blocked! Please allow popups and try again.", false);
+                return;
+            }
+            
+            // Check if window is closed periodically
+            let attempts = 0;
+            const maxAttempts = 300; // 5 minutes
+            
+            const checkClosed = setInterval(async () => {
+                attempts++;
+                
+                try {
+                    if (authWindow.closed) {
+                        console.log('🪟 Auth window closed, checking status...');
+                        clearInterval(checkClosed);
+                        
+                        // Give some time for the callback to process
+                        addMessage("🔄 Verifying connection...", false);
+                        
+                        // Try multiple times with increasing delays
+                        for (let i = 0; i < 5; i++) {
+                            await new Promise(resolve => setTimeout(resolve, 1000 * (i + 1)));
+                            
+                            console.log(`🔄 Attempt ${i + 1} to check user status...`);
+                            const success = await checkUserStatus();
+                            
+                            if (success) {
+                                console.log('✅ User status updated successfully!');
+                                return;
+                            }
+                        }
+                        
+                        // If all attempts failed
+                        console.log('❌ All status check attempts failed');
+                        addMessage("⚠️ Connection might have failed. Please try again if you don't see your profile.", false);
+                        return;
+                    }
+                } catch (error) {
+                    console.log('Error checking window status:', error);
+                }
+                
+                // Stop checking after max attempts
+                if (attempts >= maxAttempts) {
+                    console.log('⏰ Timeout: Stopping auth window check');
                     clearInterval(checkClosed);
-                    
-                    // Wait a moment then check if user is connected
-                    setTimeout(async () => {
-                        await checkUserStatus();
-                    }, 1000);
+                    if (!authWindow.closed) {
+                        authWindow.close();
+                    }
+                    addMessage("⏰ Authorization timed out. Please try again.", false);
                 }
             }, 1000);
-            
-            // Stop checking after 5 minutes
-            setTimeout(() => {
-                clearInterval(checkClosed);
-            }, 300000);
         }
     } catch (error) {
         console.error('❌ Error connecting to Spotify:', error);
@@ -1058,15 +1111,26 @@ body {
 
 function updatePersonalizationStatus(connected, userData = null) {
     const statusDiv = document.getElementById('spotifyStatus');
+    
+    if (!statusDiv) {
+        console.error('❌ spotifyStatus element not found!');
+        return;
+    }
+    
     isPersonalized = connected;
     currentUser = userData;
     
     if (connected && userData) {
-        const topGenres = userData.preferences.top_genres.slice(0, 3).join(', ');
-        const topArtists = userData.preferences.favorite_artists.slice(0, 3).join(', ');
-        const profileImage = userData.profile.image;
-        const displayName = userData.profile.display_name;
-        const followerCount = userData.profile.followers || 0;
+        console.log('🎨 Updating UI to show connected state');
+        
+        const profile = userData.profile || {};
+        const preferences = userData.preferences || {};
+        
+        const topGenres = (preferences.top_genres || []).slice(0, 3).join(', ') || 'Analyzing...';
+        const topArtists = (preferences.favorite_artists || []).slice(0, 3).join(', ') || 'Analyzing...';
+        const profileImage = profile.image;
+        const displayName = profile.display_name || 'User';
+        const followerCount = profile.followers || 0;
         
         statusDiv.innerHTML = `
             <div class="user-info">
@@ -1100,15 +1164,18 @@ function updatePersonalizationStatus(connected, userData = null) {
                     </div>
                 </div>
                 <div style="font-size: 12px; line-height: 1.4;">
-                    <p style="margin: 5px 0;"><strong>Top genres:</strong> ${topGenres || 'Analyzing...'}</p>
-                    <p style="margin: 5px 0;"><strong>Favorite artists:</strong> ${topArtists || 'Analyzing...'}</p>
+                    <p style="margin: 5px 0;"><strong>Top genres:</strong> ${topGenres}</p>
+                    <p style="margin: 5px 0;"><strong>Favorite artists:</strong> ${topArtists}</p>
                 </div>
                 <button class="spotify-disconnect-btn" onclick="disconnectSpotify()" style="margin-top: 15px;">
                     Disconnect
                 </button>
             </div>
         `;
+        
+        console.log('✅ UI updated to show connected state');
     } else {
+        console.log('🎨 Updating UI to show disconnected state');
         statusDiv.innerHTML = `
             <p>🎯 <strong>Connect your Spotify for personalized recommendations!</strong></p>
             <button class="spotify-connect-btn" onclick="connectSpotify()">
@@ -1341,7 +1408,39 @@ function highlightSongs(message) {
         
         // Initialize memory display
         updateMemoryDisplay();
+        window.addEventListener('message', async (event) => {
+        console.log('📨 Received message from popup:', event.data);
+        
+        if (event.data && event.data.type) {
+            switch (event.data.type) {
+                case 'spotify_success':
+                    console.log('🎉 Spotify connection successful!');
+                    addMessage("🎉 Spotify connected successfully! Checking your profile...", false, null, null, true);
+                    
+                    setTimeout(async () => {
+                        await checkUserStatus();
+                    }, 2000);
+                    break;
+                    
+                case 'spotify_error':
+                    console.log('❌ Spotify connection failed:', event.data.error);
+                    addMessage("❌ Spotify connection failed. Please try again!", false);
+                    break;
+            }
+        }
+    });
 
+    // 🔥 ADD THESE EVENT LISTENERS TOO 🔥
+    document.addEventListener('DOMContentLoaded', async () => {
+        console.log('📄 Page loaded, checking for existing connection...');
+        await checkUserStatus();
+    });
+
+    window.addEventListener('focus', async () => {
+        console.log('👀 Window gained focus, checking user status...');
+        await checkUserStatus();
+    });
+    
         // 🌟 Enhanced Ultra Smooth Cursor Trail
         class CursorTrail {
             constructor() {
