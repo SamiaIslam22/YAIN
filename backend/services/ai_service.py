@@ -202,6 +202,19 @@ def clean_and_validate_artist(artist_name):
 def analyze_user_request(user_message):
     """🎭 ENHANCED REGIONAL MUSIC DETECTION - Bengali, Tamil, Afrobeats, etc."""
     message_lower = user_message.lower()
+    profile_patterns = [
+        'what my name', 'whats my name', "what's my name",
+        'who am i', 'my profile', 'my spotify', 'my music taste',
+        'what do you know about me', 'tell me about myself',
+        'my genres', 'my artists', 'my preferences'
+    ]
+    
+    if any(pattern in message_lower for pattern in profile_patterns):
+        return {
+            'type': 'profile_request',
+            'search_terms': [],
+            'genre_hint': 'user profile and music taste information'
+        }
     try:
         from .spotify_service import spotify
     except ImportError:
@@ -1264,25 +1277,18 @@ def extract_song_from_response(ai_text):
     return None
 
 def generate_ai_response_personalized(user_message, user_request, available_songs, suggested_songs, user_data):
-    """🎯 Generate PERSONALIZED AI response using user's actual Spotify data"""
+    """🎯 ENHANCED: Subtle personalization + profile command support"""
     
-    # 🔧 FIX 4: Use correct data structure key
-    preferences = user_data.get('preferences', {})  # ✅ Fixed: was 'music_preferences'
+    preferences = user_data.get('preferences', {})
     profile = user_data.get('profile', {})
     
-    # Validate we have preferences
     if not preferences:
-        print(f"❌ No preferences found in user_data: {user_data.keys()}")
-        print(f"🔄 Falling back to general AI response")
+        print(f"❌ No preferences found in user_data")
         return generate_ai_response(user_message, user_request, available_songs, suggested_songs)
     
-    top_genres = preferences.get('top_genres', [])[:3]
-    favorite_artists = preferences.get('favorite_artists', [])[:3]
+    top_genres = preferences.get('top_genres', [])[:5]
+    favorite_artists = preferences.get('favorite_artists', [])[:5]
     display_name = profile.get('display_name', 'music lover')
-    
-    print(f"🎯 PERSONALIZED AI: User {display_name}")
-    print(f"🎵 Top genres: {top_genres}")
-    print(f"🎤 Favorite artists: {favorite_artists}")
     
     # Create the song list for AI prompt
     if available_songs:
@@ -1302,21 +1308,39 @@ def generate_ai_response_personalized(user_message, user_request, available_song
 ✅ YOU MUST suggest a COMPLETELY DIFFERENT song from the available list above!
 🔄 Memory check: {len(suggested_songs)} songs already suggested - pick something NEW!"""
 
-    # 🎯 ENHANCED PERSONALIZED PROMPT
-    prompt = f"""
-You are YAIN, a cheeky, witty music chatbot with personality! You know {display_name}'s music taste from their Spotify account.
+    # 🆕 PROFILE REQUEST - Show full profile info
+    if user_request['type'] == 'profile_request':
+        prompt = f"""
+You are YAIN! The user is asking about their profile/identity.
+
+🎵 USER'S SPOTIFY PROFILE:
+- Name: {display_name}
+- Top Genres: {', '.join(top_genres) if top_genres else 'Still analyzing...'}
+- Favorite Artists: {', '.join(favorite_artists) if favorite_artists else 'Still analyzing...'}
+
+Respond with their name and music taste in a fun, excited way! Examples:
+"Hey there {display_name}! I know ALL about your music taste! You're totally into {top_genres[0] if top_genres else 'awesome music'}, {top_genres[1] if len(top_genres) > 1 else 'great vibes'}, and you can't get enough of {favorite_artists[0] if favorite_artists else 'amazing artists'}! Your Spotify tells me everything! 🎵"
+
+Your enthusiastic profile response:
+"""
+    
+    # 🎭 REGULAR REQUESTS - Subtle personalization (don't always mention genres)
+    else:
+        prompt = f"""
+You are YAIN, a cheeky, witty music chatbot! You know {display_name} personally from their Spotify.
 
 User said: "{user_message}"
 
-🎵 {display_name.upper()}'S ACTUAL MUSIC TASTE (from Spotify):
-- Favorite genres: {', '.join(top_genres) if top_genres else 'Still analyzing...'}
-- Favorite artists: {', '.join(favorite_artists) if favorite_artists else 'Still analyzing...'}
+🎯 PERSONALIZATION STYLE:
+- Use their name: {display_name}
+- Be subtly personalized without always listing their genres
+- Occasionally reference their music taste when it feels natural
+- Keep responses fresh, fun, and varied
+- Sometimes be more general, sometimes more specific about their taste
 
-Your response should:
-1. **IMMEDIATELY acknowledge their personal taste** ("Hey {display_name}! I see you love {top_genres[0] if top_genres else 'great music'}!")
-2. Be excited that you know their personal taste
-3. Connect their request to their actual music preferences when relevant
-4. Then suggest that specific song with "Try 'Song Name' by Artist Name"
+🎵 Their secret music taste (use SUBTLY when relevant):
+- Top genres: {', '.join(top_genres[:3]) if top_genres else 'Still analyzing...'}
+- Favorite artists: {', '.join(favorite_artists[:3]) if favorite_artists else 'Still analyzing...'}
 
 WHAT THEY WANT: {user_request['genre_hint']}
 
@@ -1324,39 +1348,37 @@ AVAILABLE SONGS FOR THIS REQUEST:
 {songs_list}
 {exclusion_text}
 
+RESPONSE STYLE EXAMPLES:
+- Sometimes direct: "Hey {display_name}! Perfect timing for this vibe! Try..."
+- Sometimes taste-aware: "Oh {display_name}, this is SO your style! Try..."  
+- Sometimes playful: "{display_name}, I've got the perfect match for this mood! Try..."
+- Sometimes genre-specific: "I know you love that [genre] sound, {display_name}! Try..."
+
 INSTRUCTIONS:
-- Start with their NAME and mention their ACTUAL Spotify taste immediately
-- Be personalized and excited about knowing their preferences
+- Always use their name: {display_name}
+- Vary your personalization approach - don't always mention genres
 - Pick ONE song from the available list above
 - Format as: "Try 'Song Name' by Artist Name"
-- ⚠️ NEVER EVER repeat songs from the exclusion list above
-- 🧠 MEMORY: You have suggested {len(suggested_songs)} songs before - pick something COMPLETELY different!
-
-Examples of GOOD personalized responses:
-"Hey {display_name}! I know you're into {top_genres[0] if top_genres else 'indie rock'} and love {favorite_artists[0] if favorite_artists else 'Taylor Swift'} - this mood is perfect for your taste! Try..."
-"Oh {display_name}! Your Spotify shows you're big on {top_genres[0] if top_genres else 'alternative'} - I've got the PERFECT match! Try..."
-
-⚠️ CRITICAL: Your response MUST acknowledge their personal music taste in the first sentence!
+- ⚠️ NEVER repeat songs from the exclusion list above
+- Keep it engaging and personal but not repetitive
 
 Your personalized response:
 """
     
     try:
-        print("🤖 Sending PERSONALIZED prompt to AI...")
+        print("🤖 Sending SUBTLE PERSONALIZED prompt to AI...")
         response = model.generate_content(prompt)
         ai_text = response.text
-        print(f"✅ PERSONALIZED AI Response: {ai_text}")
+        print(f"✅ SUBTLE PERSONALIZED AI Response: {ai_text}")
         return ai_text
     except Exception as e:
         print(f"⚠️ Personalized AI failed, using fallback: {e}")
         # Create a quick personalized fallback
-        if top_genres and favorite_artists:
-            if available_songs:
-                import random
-                song = random.choice(available_songs)
-                return f"Hey {display_name}! I see you love {top_genres[0]} and {favorite_artists[0]} - perfect taste! Try {song}"
-            else:
-                return f"Hey {display_name}! Your taste in {top_genres[0]} is *chef's kiss*! Let me find something perfect for you..."
+        if user_request['type'] == 'profile_request':
+            return f"Hey {display_name}! I know you from your Spotify - you're into {', '.join(top_genres[:3]) if top_genres else 'awesome music'} and love artists like {', '.join(favorite_artists[:3]) if favorite_artists else 'so many great ones'}! 🎵"
+        elif available_songs:
+            import random
+            song = random.choice(available_songs)
+            return f"Hey {display_name}! This one's perfect for you right now. Try {song}"
         else:
-            # Fallback to regular AI response
-            return generate_ai_response(user_message, user_request, available_songs, suggested_songs)
+            return f"Hey {display_name}! Let me find something perfect for your vibe..."

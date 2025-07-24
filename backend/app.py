@@ -453,12 +453,17 @@ def chat():
         print(f"🎯 Detected: {user_request['type']} - {user_request['genre_hint']}")
         
         # 🎵 HANDLE SPECIFIC SONG SEARCH (NEW!)
-        if user_request['type'] == 'specific_song':
+        if user_request['type'] == 'profile_request':
+            print(f"👤 Profile request detected")
+            available_songs = []  # No song search needed for profile requests
+        
+        # 🎵 HANDLE SPECIFIC SONG SEARCH
+        elif user_request['type'] == 'specific_song':
             search_query = user_request['search_query']
             available_songs = [search_query]
             print(f"🎯 Targeting specific song: {search_query}")
 
-        # 🎤 HANDLE ARTIST SEARCH (NEW!)
+        # 🎤 HANDLE ARTIST SEARCH
         elif user_request['type'] == 'artist_search':
             artist_name = user_request['artist_name']
             artist_id = user_request.get('artist_id')  # May be provided by dynamic detection
