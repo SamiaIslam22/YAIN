@@ -13,29 +13,29 @@ import re
 genai.configure(api_key=os.getenv('GEMINI_API_KEY'))
 model = genai.GenerativeModel('gemini-1.5-flash')
 
-# In ai_service.py - Enhanced ARTIST SEARCH DETECTION
+# Artist search detection functions
 
-# Replace the ARTIST SEARCH DETECTION section in ai_service.py
-
-# 🎤 ENHANCED ARTIST SEARCH DETECTION
 def detect_artist_search(message_lower):
-    """Detect artist search requests"""
+    """
+    Detect if user message contains artist search patterns
+    Returns cleaned artist name if found, None otherwise
+    """
     
-    # Pattern 1: "give me songs by [artist]"
+    # Pattern 1: Explicit requests like "give me songs by [artist]"
     pattern1 = r'(?:give me|show me|find|get|want|play)\s+(?:some\s+)?(?:songs?|music|tracks?)\s+(?:by|from)\s+(.+?)(?:\s|$|[.!?])'
     match1 = re.search(pattern1, message_lower, re.IGNORECASE)
     if match1:
         artist = match1.group(1).strip()
         return clean_and_validate_artist(artist)
     
-    # Pattern 2: "songs by [artist]"
+    # Pattern 2: Direct format like "songs by [artist]"
     pattern2 = r'(?:^|\s)(?:songs?|music|tracks?)\s+(?:by|from)\s+(.+?)(?:\s|$|[.!?])'
     match2 = re.search(pattern2, message_lower, re.IGNORECASE)
     if match2:
         artist = match2.group(1).strip()
         return clean_and_validate_artist(artist)
     
-    # Pattern 3: "[artist] songs/music"
+    # Pattern 3: Artist name followed by music terms like "[artist] songs"
     pattern3 = r'(?:^|\s)(.+?)\s+(?:songs?|music|tracks?)(?:\s|$|[.!?])'
     match3 = re.search(pattern3, message_lower, re.IGNORECASE)
     if match3:
@@ -44,20 +44,20 @@ def detect_artist_search(message_lower):
         if validated and len(validated.split()) <= 2:
             return validated
     
-    # 🆕 Pattern 4: Single artist names (like "drake", "taylor", "keshi")
+    # Pattern 4: Single artist names detection for short inputs
     stripped_message = message_lower.strip()
     words = stripped_message.split()
     
-    # If it's 1-3 words, might be an artist name
+    # Check if 1-3 words could be an artist name
     if 1 <= len(words) <= 3 and len(stripped_message) >= 2:
-        # Only exclude obvious mood/command words
+        # Exclude obvious non-artist words
         non_artist_words = {
             'happy', 'sad', 'chill', 'angry', 'excited', 'love', 'hate',
             'music', 'song', 'songs', 'play', 'listen', 'find', 'search',
             'hello', 'hi', 'hey', 'thanks', 'help', 'please', 'yes', 'no'
         }
         
-        # If it's not obviously a mood/command, treat as artist name
+        # If not obviously a mood/command word, treat as potential artist name
         if not any(word in non_artist_words for word in words):
             potential_artist = ' '.join(words).title()
             print(f"🎤 Single artist detected: {potential_artist}")
@@ -66,14 +66,17 @@ def detect_artist_search(message_lower):
     return None
 
 def check_if_artist_exists(query, spotify_client):
-    """🔍 DYNAMIC: Check if query is an artist name using Spotify search"""
+    """
+    Verify if query matches an actual artist using Spotify API
+    Returns artist info dict if found, None otherwise
+    """
     if not spotify_client:
         return None
     
     print(f"🔍 Checking if '{query}' is an artist...")
     
     try:
-        # Search for artists with this name
+        # Search for artists matching the query
         results = spotify_client.search(q=f'artist:"{query}"', type='artist', limit=10, market='US')
         artists = results['artists']['items']
         
@@ -81,7 +84,7 @@ def check_if_artist_exists(query, spotify_client):
             print(f"❌ No artists found for '{query}'")
             return None
         
-        # Find the most popular/relevant artist
+        # Find the most relevant artist based on popularity and name match
         best_artist = None
         highest_popularity = 0
         
@@ -92,11 +95,11 @@ def check_if_artist_exists(query, spotify_client):
             
             print(f"  👤 Found: {artist['name']} (popularity: {popularity})")
             
-            # Check name match quality
+            # Calculate match quality score
             exact_match = artist_name == query_lower
             contains_match = query_lower in artist_name or artist_name in query_lower
             
-            # Prioritize exact matches, then popular artists
+            # Score calculation: exact matches get highest priority
             score = 0
             if exact_match:
                 score = popularity + 100  # Boost exact matches
@@ -110,7 +113,7 @@ def check_if_artist_exists(query, spotify_client):
                 best_artist = artist
                 print(f"    ⭐ New best: {artist['name']} (score: {score})")
         
-        # Only return if we found a reasonably popular artist
+        # Only return artists with reasonable popularity threshold
         if best_artist and best_artist.get('popularity', 0) > 15:
             print(f"✅ Artist detected: {best_artist['name']} (popularity: {best_artist['popularity']})")
             return {
@@ -128,11 +131,14 @@ def check_if_artist_exists(query, spotify_client):
         return None
 
 def is_potential_artist_query(message):
-    """🎯 Determine if a message might be an artist name"""
+    """
+    Determine if a message might be an artist name by excluding obvious non-artist patterns
+    Returns True if message could be an artist name
+    """
     message = message.strip().lower()
     words = message.split()
     
-    # Skip obvious non-artist patterns
+    # Define words that indicate non-artist queries
     non_artist_indicators = {
         # Emotions/moods
         'happy', 'sad', 'angry', 'excited', 'chill', 'relaxed', 'stressed',
@@ -158,18 +164,18 @@ def is_potential_artist_query(message):
         'bollywood', 'kpop', 'latin', 'african', 'american', 'british'
     }
     
-    # Check basic criteria for potential artist name
-    if len(words) > 4:  # Too many words, probably not an artist
+    # Basic validation checks
+    if len(words) > 4:  # Too many words for typical artist name
         return False
     
-    if len(message) < 2:  # Too short
+    if len(message) < 2:  # Too short to be meaningful
         return False
     
-    # If all words are in non-artist list, probably not an artist
+    # If all words are non-artist indicators, probably not an artist
     if all(word in non_artist_indicators for word in words):
         return False
     
-    # If it contains obvious command patterns, not an artist
+    # Check for obvious command patterns
     command_patterns = [
         r'give me.*',
         r'play some.*',
@@ -183,16 +189,19 @@ def is_potential_artist_query(message):
         if re.search(pattern, message):
             return False
     
-    # If we get here, it might be an artist name
+    # If we reach here, it might be an artist name
     print(f"🤔 '{message}' might be an artist name - checking Spotify...")
     return True
 
 def clean_and_validate_artist(artist_name):
-    """Simple artist name cleanup"""
+    """
+    Clean up artist name by removing common prefixes and suffixes
+    Returns cleaned artist name or None if invalid
+    """
     if not artist_name or len(artist_name.strip()) < 2:
         return None
     
-    # Basic cleanup
+    # Remove common prefixes like "the" and suffixes like "please"
     artist_name = artist_name.strip()
     artist_name = re.sub(r'^(?:the|some)\s+', '', artist_name, flags=re.IGNORECASE)
     artist_name = re.sub(r'\s+(?:please|pls)$', '', artist_name, flags=re.IGNORECASE)
@@ -200,8 +209,13 @@ def clean_and_validate_artist(artist_name):
     return artist_name.title()
 
 def analyze_user_request(user_message):
-    """🎭 ENHANCED REGIONAL MUSIC DETECTION - Bengali, Tamil, Afrobeats, etc."""
+    """
+    Main function to analyze user message and determine request type
+    Returns dict with request type, search terms, and genre hint
+    """
     message_lower = user_message.lower()
+    
+    # Check for profile information requests
     profile_patterns = [
         'what my name', 'whats my name', "what's my name",
         'who am i', 'my profile', 'my spotify', 'my music taste',
@@ -215,30 +229,37 @@ def analyze_user_request(user_message):
             'search_terms': [],
             'genre_hint': 'user profile and music taste information'
         }
+    
+    # Import spotify client for artist verification
     try:
         from .spotify_service import spotify
     except ImportError:
         from spotify_service import spotify
-    # 🎵 SPECIFIC SONG SEARCH DETECTION (keep existing)
+    
+    # Check for specific song search patterns
     specific_song_patterns = [
         r'^(.+?)\s+by\s+(.+?)$',
         r'(?:play|find|search|give me|want|show me)\s+(.+?)\s+by\s+(.+?)(?:\s|$)',
     ]
+    
+    # Check for creator/developer questions
     creator_patterns = [
-    'who made you', 'who created you', 'who built you', 'who developed you',
-    'who is your creator', 'who is your author', 'who is your developer',
-    'who programmed you', 'who designed you', 'who coded you', 
-    'name your creator', 'name your author', 'who is your maker',
-    'who owns you', 'who is behind you', 'your creator', 'your author',
-    'who is your boss', 'who is your god', 'who is your queen'
-]
+        'who made you', 'who created you', 'who built you', 'who developed you',
+        'who is your creator', 'who is your author', 'who is your developer',
+        'who programmed you', 'who designed you', 'who coded you', 
+        'name your creator', 'name your author', 'who is your maker',
+        'who owns you', 'who is behind you', 'your creator', 'your author',
+        'who is your boss', 'who is your god', 'who is your queen'
+    ]
 
     if any(pattern in message_lower for pattern in creator_patterns):
         return {
-        'type': 'creator_request',
-        'search_terms': [],
-        'genre_hint': 'creator and author information'
-    }
+            'type': 'creator_request',
+            'search_terms': [],
+            'genre_hint': 'creator and author information'
+        }
+    
+    # Process specific song requests
     for pattern in specific_song_patterns:
         match = re.search(pattern, message_lower, re.IGNORECASE)
         if match:
@@ -256,7 +277,7 @@ def analyze_user_request(user_message):
                     'genre_hint': f"the song '{song_name.title()}' by {artist_name.title()}"
                 }
     
-    # 🎤 ENHANCED ARTIST SEARCH DETECTION (keep your existing patterns)
+    # Check for explicit artist search patterns
     artist_patterns = [
         # "give me songs by keshi" 
         r'(?:give me|play|find|show me|want)\s+(?:songs?|music|tracks?)\s+(?:by|from)\s+(.+?)(?:\s|$)',
@@ -275,7 +296,7 @@ def analyze_user_request(user_message):
         if match:
             artist_name = match.group(1).strip()
             
-            # Enhanced exclusion - remove common non-artist words
+            # Filter out common non-artist words
             excluded_words = [
                 'happy', 'sad', 'chill', 'me', 'some', 'good', 'new', 'old', 'best',
                 'favorite', 'latest', 'popular', 'trending', 'hot', 'cool', 'nice',
@@ -285,13 +306,13 @@ def analyze_user_request(user_message):
                 'random', 'any', 'something', 'anything'
             ]
             
-            # Check if artist name is valid
+            # Validate artist name criteria
             if (len(artist_name) > 2 and 
                 artist_name not in excluded_words and
                 not any(word in artist_name for word in ['songs', 'music', 'tracks']) and
-                len(artist_name.split()) <= 3):  # Artists usually don't have super long names
+                len(artist_name.split()) <= 3):  # Reasonable artist name length
                 
-                # Check if this artist exists on Spotify
+                # Verify artist exists on Spotify
                 artist_info = check_if_artist_exists(artist_name, spotify)
                 if artist_info:
                     print(f"🎤 Explicit artist detected: {artist_info['name']}")
@@ -303,7 +324,7 @@ def analyze_user_request(user_message):
                         'genre_hint': f'songs by {artist_info["name"]}'
                     }
     
-    # 🚀 DYNAMIC ARTIST DETECTION - Check if single word/phrase is an artist
+    # Dynamic artist detection for single word/phrase queries
     if is_potential_artist_query(user_message):
         artist_info = check_if_artist_exists(user_message.strip(), spotify)
         if artist_info:
@@ -315,11 +336,10 @@ def analyze_user_request(user_message):
                 'search_terms': [f"{artist_info['name']} songs", f"{artist_info['name']} popular", f"{artist_info['name']} hits"],
                 'genre_hint': f'songs by {artist_info["name"]}'
             }
-    # Add this section RIGHT AFTER your dynamic artist detection and BEFORE Bengali music detection:
 
-    # 🎭 GENRE COMBINATIONS - Check for mood + region/genre combinations
+    # Genre and mood combinations - check for combined requests first
     
-    # Happy combinations
+    # Happy mood combinations with regional music
     if 'happy' in message_lower and 'bollywood' in message_lower:
         return {
             'type': 'happy_bollywood',
@@ -360,7 +380,7 @@ def analyze_user_request(user_message):
             'genre_hint': 'happy Latin music'
         }
     
-    # Sad combinations
+    # Sad mood combinations
     elif 'sad' in message_lower and 'bollywood' in message_lower:
         return {
             'type': 'sad_bollywood',
@@ -391,7 +411,7 @@ def analyze_user_request(user_message):
             'genre_hint': 'sad indie music'
         }
     
-    # Chill combinations
+    # Chill mood combinations
     elif 'chill' in message_lower and any(word in message_lower for word in ['kpop', 'k-pop', 'korean']):
         return {
             'type': 'chill_kpop',
@@ -422,7 +442,7 @@ def analyze_user_request(user_message):
             'genre_hint': 'chill Afrobeats music'
         }
     
-    # Energetic combinations
+    # Energetic mood combinations
     elif any(word in message_lower for word in ['energetic', 'pump', 'hype', 'intense']) and 'bollywood' in message_lower:
         return {
             'type': 'energetic_bollywood',
@@ -443,7 +463,7 @@ def analyze_user_request(user_message):
             'genre_hint': 'energetic K-pop music'
         }
     
-    # Romantic combinations
+    # Romantic mood combinations
     elif any(word in message_lower for word in ['romantic', 'love']) and 'bollywood' in message_lower:
         return {
             'type': 'romantic_bollywood',
@@ -464,7 +484,9 @@ def analyze_user_request(user_message):
             'genre_hint': 'romantic K-pop music'
         }
  
-    # 🇧🇩 BENGALI MUSIC (SEPARATE from Hindi/Bollywood!)
+    # Regional music detection - separate categories for different music traditions
+    
+    # Bengali music (distinct from Hindi/Bollywood)
     if any(word in message_lower for word in ['bengali', 'bangla', 'bengali song', 'bengali music', 'bangladesh music']):
         return {
             'type': 'bengali',
@@ -482,7 +504,7 @@ def analyze_user_request(user_message):
             'genre_hint': 'Bengali and Bangla music'
         }
     
-    # 🇮🇳 TAMIL MUSIC (SEPARATE category!)
+    # Tamil music (Kollywood)
     elif any(word in message_lower for word in ['tamil', 'tamil song', 'tamil music', 'kollywood', 'chennai music']):
         return {
             'type': 'tamil',
@@ -498,7 +520,7 @@ def analyze_user_request(user_message):
             'genre_hint': 'Tamil and Kollywood music'
         }
     
-    # 🇮🇳 TELUGU MUSIC (SEPARATE category!)
+    # Telugu music (Tollywood)
     elif any(word in message_lower for word in ['telugu', 'telugu song', 'telugu music', 'tollywood', 'hyderabad music']):
         return {
             'type': 'telugu',
@@ -514,7 +536,7 @@ def analyze_user_request(user_message):
             'genre_hint': 'Telugu and Tollywood music'
         }
     
-    # 🇮🇳 PUNJABI MUSIC (SEPARATE category!)
+    # Punjabi music
     elif any(word in message_lower for word in ['punjabi', 'punjabi song', 'punjabi music', 'bhangra', 'punjab music']):
         return {
             'type': 'punjabi',
@@ -530,7 +552,7 @@ def analyze_user_request(user_message):
             'genre_hint': 'Punjabi and Bhangra music'
         }
     
-    # 🌍 AFROBEATS & AFRICAN MUSIC (SEPARATE and ENHANCED!)
+    # Afrobeats and African music
     elif any(word in message_lower for word in ['afrobeats', 'afro beats', 'african', 'nigerian', 'ghana music', 'afro music', 'african song']):
         return {
             'type': 'afrobeats',
@@ -547,7 +569,7 @@ def analyze_user_request(user_message):
             'genre_hint': 'Afrobeats and African music'
         }
     
-    # 🇰🇪 KENYAN & EAST AFRICAN
+    # East African music
     elif any(word in message_lower for word in ['kenyan', 'kenya music', 'east african', 'swahili music', 'bongo flava']):
         return {
             'type': 'east_african',
@@ -562,7 +584,7 @@ def analyze_user_request(user_message):
             'genre_hint': 'East African and Swahili music'
         }
     
-    # 🇯🇲 REGGAE & CARIBBEAN (ENHANCED!)
+    # Caribbean music (Reggae, Dancehall, etc.)
     elif any(word in message_lower for word in ['reggae', 'jamaican', 'caribbean', 'dancehall', 'soca', 'calypso']):
         return {
             'type': 'caribbean',
@@ -578,7 +600,7 @@ def analyze_user_request(user_message):
             'genre_hint': 'Reggae and Caribbean music'
         }
     
-    # 🇧🇷 BRAZILIAN MUSIC (SEPARATE!)
+    # Brazilian music
     elif any(word in message_lower for word in ['brazilian', 'brazil music', 'portuguese music', 'bossa nova', 'samba', 'forró']):
         return {
             'type': 'brazilian',
@@ -593,7 +615,7 @@ def analyze_user_request(user_message):
             'genre_hint': 'Brazilian and Portuguese music'
         }
     
-    # 🇮🇳 HINDI/BOLLYWOOD (KEEP SEPARATE!)
+    # Hindi/Bollywood music
     elif any(word in message_lower for word in ['hindi', 'bollywood', 'indian music', 'hindi song']):
         return {
             'type': 'hindi_bollywood',
@@ -610,7 +632,7 @@ def analyze_user_request(user_message):
             'genre_hint': 'Hindi Bollywood music'
         }
     
-    # 🇯🇵 JAPANESE & ANIME (existing)
+    # Japanese and Anime music
     elif any(word in message_lower for word in ['anime', 'japanese', 'jpop', 'j-pop', 'otaku', 'weeb', 'manga']):
         return {
             'type': 'anime_japanese',
@@ -622,6 +644,8 @@ def analyze_user_request(user_message):
             ],
             'genre_hint': 'Japanese anime or J-pop music'
         }
+    
+    # K-pop and Korean music
     elif any(word in message_lower for word in ['kpop', 'k-pop', 'korean', 'bts', 'blackpink', 'twice']):
         return {
             'type': 'kpop',
@@ -632,6 +656,8 @@ def analyze_user_request(user_message):
             ],
             'genre_hint': 'K-pop or Korean music'
         }
+    
+    # Rock and metal genres
     elif any(word in message_lower for word in ['rock', 'metal', 'punk', 'grunge', 'alternative']):
         return {
             'type': 'rock',
@@ -643,6 +669,8 @@ def analyze_user_request(user_message):
             ],
             'genre_hint': 'rock music'
         }
+    
+    # Hip-hop and rap
     elif any(word in message_lower for word in ['rap', 'hip hop', 'hip-hop', 'trap', 'drill']):
         return {
             'type': 'hiphop',
@@ -654,6 +682,8 @@ def analyze_user_request(user_message):
             ],
             'genre_hint': 'hip-hop or rap music'
         }
+    
+    # Pop music
     elif any(word in message_lower for word in ['pop', 'mainstream', 'radio', 'chart', 'hits']):
         return {
             'type': 'pop',
@@ -664,6 +694,8 @@ def analyze_user_request(user_message):
             ],
             'genre_hint': 'pop music'
         }
+    
+    # Electronic and dance music
     elif any(word in message_lower for word in ['electronic', 'edm', 'techno', 'house', 'dubstep']):
         return {
             'type': 'electronic',
@@ -676,7 +708,9 @@ def analyze_user_request(user_message):
             'genre_hint': 'electronic and dance music'
         }
     
-    # 🎵 NICHE GENRES (existing)
+    # Niche and experimental genres
+    
+    # Post-rock and instrumental
     elif any(word in message_lower for word in ['post-rock', 'post rock', 'instrumental rock', 'epic instrumental']):
         return {
             'type': 'post_rock',
@@ -687,6 +721,8 @@ def analyze_user_request(user_message):
             ],
             'genre_hint': 'post-rock and epic instrumental music'
         }
+    
+    # Ambient and atmospheric music
     elif any(word in message_lower for word in ['ambient', 'atmospheric', 'soundscape', 'drone', 'minimal']):
         return {
             'type': 'ambient',
@@ -698,6 +734,8 @@ def analyze_user_request(user_message):
             ],
             'genre_hint': 'ambient and atmospheric music'
         }
+    
+    # Shoegaze and dream pop
     elif any(word in message_lower for word in ['shoegaze', 'dream pop', 'ethereal', 'wall of sound']):
         return {
             'type': 'shoegaze',
@@ -709,7 +747,7 @@ def analyze_user_request(user_message):
             'genre_hint': 'shoegaze and dream pop music'
         }
     
-    # 🌟 MAINSTREAM HITS (existing)
+    # Mainstream hits and chart toppers
     elif any(word in message_lower for word in ['mainstream', 'chart hits', 'billboard', 'radio hits', 'viral']):
         return {
             'type': 'mainstream',
@@ -722,7 +760,7 @@ def analyze_user_request(user_message):
             'genre_hint': 'mainstream hits and chart toppers'
         }
     
-    # 🎨 INDIE DISCOVERIES (existing)
+    # Indie and alternative music
     elif any(word in message_lower for word in ['indie', 'underground', 'alternative', 'experimental', 'art rock']):
         return {
             'type': 'indie',
@@ -735,7 +773,9 @@ def analyze_user_request(user_message):
             'genre_hint': 'indie and alternative discoveries'
         }
     
-    # 📅 DECADES (existing)
+    # Decade-specific music requests
+    
+    # 1970s music
     elif any(word in message_lower for word in ['70s', '1970s', 'seventies', 'disco era', 'classic rock era']):
         return {
             'type': 'seventies',
@@ -746,6 +786,8 @@ def analyze_user_request(user_message):
             ],
             'genre_hint': '1970s music and disco era hits'
         }
+    
+    # 1980s music
     elif any(word in message_lower for word in ['80s', '1980s', 'eighties', 'new wave', 'synth pop']):
         return {
             'type': 'eighties',
@@ -756,6 +798,8 @@ def analyze_user_request(user_message):
             ],
             'genre_hint': '1980s new wave and synth pop'
         }
+    
+    # 1990s music
     elif any(word in message_lower for word in ['90s', '1990s', 'nineties', 'grunge', 'alternative rock']):
         return {
             'type': 'nineties',
@@ -766,6 +810,8 @@ def analyze_user_request(user_message):
             ],
             'genre_hint': '1990s grunge and alternative rock'
         }
+    
+    # 2000s music
     elif any(word in message_lower for word in ['2000s', 'early 2000s', 'y2k', 'millennium', 'emo']):
         return {
             'type': 'two_thousands',
@@ -777,7 +823,9 @@ def analyze_user_request(user_message):
             'genre_hint': '2000s emo and pop punk era'
         }
     
-    # 😊 POSITIVE EMOTIONS (existing)
+    # Emotion-based music requests
+    
+    # Positive emotions
     elif any(word in message_lower for word in ['happy', 'joyful', 'cheerful', 'sunny', 'upbeat', 'good mood']):
         return {
             'type': 'happy',
@@ -789,6 +837,7 @@ def analyze_user_request(user_message):
             ],
             'genre_hint': 'happy and uplifting music'
         }
+    
     elif any(word in message_lower for word in ['excited', 'thrilled', 'pumped', 'hyped', 'stoked', 'energetic']):
         return {
             'type': 'excited',
@@ -800,6 +849,7 @@ def analyze_user_request(user_message):
             ],
             'genre_hint': 'exciting and energetic music'
         }
+    
     elif any(word in message_lower for word in ['love', 'romantic', 'affectionate', 'passionate', 'tender', 'romance']):
         return {
             'type': 'romantic',
@@ -811,6 +861,7 @@ def analyze_user_request(user_message):
             ],
             'genre_hint': 'romantic and love songs'
         }
+    
     elif any(word in message_lower for word in ['confident', 'empowered', 'strong', 'bold', 'powerful', 'badass']):
         return {
             'type': 'confident',
@@ -821,6 +872,7 @@ def analyze_user_request(user_message):
             ],
             'genre_hint': 'confident and empowering music'
         }
+    
     elif any(word in message_lower for word in ['grateful', 'thankful', 'appreciative', 'blessed']):
         return {
             'type': 'grateful',
@@ -830,6 +882,7 @@ def analyze_user_request(user_message):
             ],
             'genre_hint': 'grateful and appreciative music'
         }
+    
     elif any(word in message_lower for word in ['peaceful', 'calm', 'serene', 'tranquil', 'chill', 'relaxed']):
         return {
             'type': 'peaceful',
@@ -841,7 +894,7 @@ def analyze_user_request(user_message):
             'genre_hint': 'peaceful and calming music'
         }
     
-    # 😔 NEGATIVE EMOTIONS (existing)
+    # Negative emotions
     elif any(word in message_lower for word in ['sad', 'melancholic', 'sorrowful', 'heartbroken', 'depressed', 'down']):
         return {
             'type': 'sad',
@@ -853,6 +906,7 @@ def analyze_user_request(user_message):
             ],
             'genre_hint': 'sad and emotional music'
         }
+    
     elif any(word in message_lower for word in ['angry', 'furious', 'aggressive', 'mad', 'rage', 'pissed']):
         return {
             'type': 'angry',
@@ -864,6 +918,7 @@ def analyze_user_request(user_message):
             ],
             'genre_hint': 'angry and aggressive music'
         }
+    
     elif any(word in message_lower for word in ['anxious', 'worried', 'nervous', 'stressed', 'anxiety', 'panic']):
         return {
             'type': 'anxious',
@@ -873,6 +928,7 @@ def analyze_user_request(user_message):
             ],
             'genre_hint': 'calming music for anxiety relief'
         }
+    
     elif any(word in message_lower for word in ['lonely', 'isolated', 'empty', 'longing', 'alone']):
         return {
             'type': 'lonely',
@@ -883,7 +939,7 @@ def analyze_user_request(user_message):
             'genre_hint': 'music for lonely moments'
         }
     
-    # 🌍 LATIN MUSIC (enhanced existing)
+    # Latin and Spanish music
     elif any(word in message_lower for word in ['latin', 'spanish', 'reggaeton', 'salsa', 'bachata']):
         return {
             'type': 'latin',
@@ -895,7 +951,9 @@ def analyze_user_request(user_message):
             'genre_hint': 'Latin and Spanish music'
         }
     
-    # 🎭 ACTIVITY-BASED (existing)
+    # Activity-based music requests
+    
+    # Workout and fitness music
     elif any(word in message_lower for word in ['workout', 'gym', 'cardio', 'strength', 'exercise', 'fitness']):
         return {
             'type': 'workout',
@@ -907,6 +965,8 @@ def analyze_user_request(user_message):
             ],
             'genre_hint': 'workout and fitness music'
         }
+    
+    # Study and focus music
     elif any(word in message_lower for word in ['study', 'focus', 'concentration', 'work', 'productive']):
         return {
             'type': 'study',
@@ -918,6 +978,8 @@ def analyze_user_request(user_message):
             ],
             'genre_hint': 'study and focus music'
         }
+    
+    # Party and dance music
     elif any(word in message_lower for word in ['party', 'celebration', 'dance', 'social', 'club']):
         return {
             'type': 'party',
@@ -929,6 +991,8 @@ def analyze_user_request(user_message):
             ],
             'genre_hint': 'party and dance music'
         }
+    
+    # Driving and travel music
     elif any(word in message_lower for word in ['driving', 'road trip', 'cruising', 'car', 'highway']):
         return {
             'type': 'driving',
@@ -939,7 +1003,9 @@ def analyze_user_request(user_message):
             'genre_hint': 'driving and road trip music'
         }
     
-    # 🎮 MODERN CATEGORIES (existing)
+    # Modern digital culture music categories
+    
+    # Gaming and epic music
     elif any(word in message_lower for word in ['gaming', 'games', 'video game', 'epic', 'boss battle', 'rpg']):
         return {
             'type': 'gaming',
@@ -951,6 +1017,8 @@ def analyze_user_request(user_message):
             ],
             'genre_hint': 'gaming and epic music'
         }
+    
+    # Lo-fi and study beats
     elif any(word in message_lower for word in ['lofi', 'lo-fi', 'chill hop', 'study beats', 'aesthetic']):
         return {
             'type': 'lofi',
@@ -962,6 +1030,10 @@ def analyze_user_request(user_message):
             ],
             'genre_hint': 'lo-fi and chill hop music'
         }
+    
+    # Additional regional music categories
+    
+    # Vietnamese music
     elif any(word in message_lower for word in ['vietnamese', 'vietnam music', 'vpop', 'vietnamese song']):
         return {
             'type': 'vietnamese',
@@ -974,7 +1046,7 @@ def analyze_user_request(user_message):
             'genre_hint': 'Vietnamese and V-pop music'
         }
     
-    # 🇹🇭 THAI MUSIC
+    # Thai music
     elif any(word in message_lower for word in ['thai', 'thailand music', 'thai song', 'thai pop']):
         return {
             'type': 'thai',
@@ -987,7 +1059,7 @@ def analyze_user_request(user_message):
             'genre_hint': 'Thai music and T-pop'
         }
     
-    # 🇸🇦 ARABIC & MIDDLE EASTERN MUSIC
+    # Arabic and Middle Eastern music
     elif any(word in message_lower for word in ['arabic', 'middle eastern', 'arabic music', 'arab music', 'lebanese', 'egyptian music']):
         return {
             'type': 'arabic',
@@ -1001,7 +1073,7 @@ def analyze_user_request(user_message):
             'genre_hint': 'Arabic and Middle Eastern music'
         }
     
-    # 🇮🇩 INDONESIAN MUSIC
+    # Indonesian music
     elif any(word in message_lower for word in ['indonesian', 'indonesia music', 'indo music', 'indonesian song']):
         return {
             'type': 'indonesian',
@@ -1014,7 +1086,7 @@ def analyze_user_request(user_message):
             'genre_hint': 'Indonesian music and Indo-pop'
         }
     
-    # 🇫🇮 FINNISH & NORDIC MUSIC
+    # Nordic music
     elif any(word in message_lower for word in ['finnish', 'finland music', 'nordic music', 'scandinavian music']):
         return {
             'type': 'nordic',
@@ -1027,7 +1099,7 @@ def analyze_user_request(user_message):
             'genre_hint': 'Finnish and Nordic music'
         }
     
-    # 🇲🇽 MEXICAN & REGIONAL MEXICAN
+    # Mexican music
     elif any(word in message_lower for word in ['mexican', 'mexico music', 'mariachi', 'banda', 'ranchera']):
         return {
             'type': 'mexican',
@@ -1040,7 +1112,7 @@ def analyze_user_request(user_message):
             'genre_hint': 'Mexican and Regional Mexican music'
         }
     
-    # 🇷🇺 RUSSIAN & EASTERN EUROPEAN
+    # Russian and Eastern European music
     elif any(word in message_lower for word in ['russian', 'russia music', 'eastern european', 'slavic music']):
         return {
             'type': 'russian',
@@ -1053,7 +1125,7 @@ def analyze_user_request(user_message):
             'genre_hint': 'Russian and Eastern European music'
         }
     
-    # 🎵 DEFAULT CASE
+    # Default case for general music requests
     else:
         return {
             'type': 'general',
@@ -1067,15 +1139,18 @@ def analyze_user_request(user_message):
         }
 
 def generate_ai_response(user_message, user_request, available_songs, suggested_songs):
-    """Generate AI response using Gemini - FIXED ARTIST SEARCH LOGIC"""
+    """
+    Generate AI response using Gemini with memory-aware song suggestions
+    Handles different request types (specific songs, artist searches, general requests)
+    """
     
-    # Create the song list for AI prompt
+    # Prepare song list for AI context
     if available_songs:
         songs_list = "\n".join([f"- {song}" for song in available_songs[:20]])
     else:
         songs_list = "No matching songs found in database"
     
-    # 🧠 MEMORY: Create exclusion list for AI
+    # Create memory exclusion context for AI
     exclusion_text = ""
     if suggested_songs:
         exclusion_text = f"""
@@ -1087,7 +1162,7 @@ def generate_ai_response(user_message, user_request, available_songs, suggested_
 ✅ YOU MUST suggest a COMPLETELY DIFFERENT song from the available list above!
 🔄 Memory check: {len(suggested_songs)} songs already suggested - pick something NEW!"""
 
-    # 🎯 SPECIFIC SONG SEARCH
+    # Handle specific song requests
     if user_request['type'] == 'specific_song':
         song_name = user_request['song_name']
         artist_name = user_request['artist_name']
@@ -1097,7 +1172,7 @@ def generate_ai_response(user_message, user_request, available_songs, suggested_
     
         Your response:"""
     
-    # 🎤 ARTIST SEARCH (UPDATED - including dynamic detection)
+    # Handle artist-specific requests
     elif user_request['type'] == 'artist_search':
         artist_name = user_request['artist_name']
         artist_id = user_request.get('artist_id')  # May be provided by dynamic detection
@@ -1113,7 +1188,7 @@ def generate_ai_response(user_message, user_request, available_songs, suggested_
     
         Your response:"""
     
-    # 🎭 GENERAL REQUESTS (existing logic - UNCHANGED)
+    # Handle general mood/genre requests
     else:
         prompt = f"""
 You are YAIN, a cheeky, witty music chatbot with personality! You're like that friend who always knows the perfect song and loves to chat.
@@ -1125,7 +1200,7 @@ Your response should:
 2. Reference a song theme naturally in your conversation 
 3. Then suggest that specific song with "Try 'Song Name' by Artist Name"
 5. Be funny and nice, but not too long - keep it engaging!
-6. Keep it SHORT: Only 2-3 sentences MAX
+6. Keep it SHORT: Only 3-5 sentences MAX
 
 
 CREATIVE FREEDOM RULES:
@@ -1135,7 +1210,7 @@ CREATIVE FREEDOM RULES:
 - Make each response feel fresh and unique
 - Show personality through your word choice and energy
 - React genuinely to what they're telling you
-- Keep it SHORT: Only 2-3 sentences MAX
+- Keep it SHORT: Only 3-5 sentences MAX
 
 WHAT THEY WANT: {user_request['genre_hint']}
 
@@ -1167,7 +1242,7 @@ Your conversational response (chat first, then suggest song):
     except Exception as e:
         print(f"⚠️ AI Rate Limited or Failed: {e}")
         
-        # THIS IS THE IMPORTANT PART - calls your helper functions!
+        # Handle AI failure with appropriate fallbacks
         if user_request['type'] == 'artist_search':
             artist_name = user_request['artist_name']
             if available_songs:
@@ -1182,14 +1257,17 @@ Your conversational response (chat first, then suggest song):
                 import random
                 return random.choice(artist_responses)
         
-        # THIS LINE CALLS YOUR HELPER FUNCTION!
+        # Use creative fallback for other request types
         return get_creative_fallback_response(user_request, available_songs)
 
 def extract_song_from_response(ai_text):
-    """🔧 UPDATED: Extract song from conversational AI responses - Better for personality!"""
+    """
+    Extract song name and artist from AI response text using regex patterns
+    Returns formatted string like "'Song Name' by Artist Name" or None if not found
+    """
     print(f"🔍 Extracting song from: {ai_text}")
     
-    # 🎭 UPDATED: Patterns optimized for conversational responses
+    # Regex patterns to match different song suggestion formats
     patterns = [
         # Try "Song" by Artist - main pattern (works with conversational text)
         r"[Tt]ry ['\"]([^'\"]+)['\"] by ([^.!?\n,🎵🎶🇯🇲🇧🇩🇮🇳🌍–—]+?)(?=[\s]*[.!?\n,🎵🎶🇯🇲🇧🇩🇮🇳🌍–—]|$)",
@@ -1216,7 +1294,7 @@ def extract_song_from_response(ai_text):
             song_name = match.group(1).strip()
             artist_name = match.group(2).strip()
             
-            # 🧹 ENHANCED CLEANUP: Remove more conversational trailing words and emojis
+            # Clean up artist name by removing common trailing words and emojis
             cleanup_words = [
                 r'\s*(–|—|\!|\?|\.|,)',  # Punctuation
                 r'\s+it\'s',             # "it's"
@@ -1240,13 +1318,13 @@ def extract_song_from_response(ai_text):
                 r'\s+major',             # "major"
             ]
             
-            # Apply all cleanup patterns
+            # Apply cleanup patterns to artist name
             for cleanup_pattern in cleanup_words:
                 artist_name = re.sub(cleanup_pattern + r'.*$', '', artist_name, flags=re.IGNORECASE)
             
             artist_name = artist_name.strip().rstrip('!.?–—,-')
             
-            # 🔧 ENHANCED: Better length handling for conversational responses
+            # Handle overly long artist names
             if len(artist_name) > 35:
                 words = artist_name.split()
                 if len(words) > 3:
@@ -1254,11 +1332,11 @@ def extract_song_from_response(ai_text):
                 elif len(words) > 1:
                     artist_name = ' '.join(words[:2])  # Take first 2 words otherwise
             
-            # 🧹 FINAL CLEANUP: Remove any remaining problematic characters including regional flag emojis
+            # Remove any remaining emojis and regional flag characters
             artist_name = re.sub(r'[🎵🎶🇯🇲🔥💯⚡🇧🇩🇮🇳🌍🇰🇷🇺🇸🇲🇽🇧🇷🇰🇪]', '', artist_name)  # Remove emojis
             artist_name = artist_name.strip()
             
-            # Validate we have both song and artist
+            # Validate that we have both song and artist
             if song_name and artist_name and len(artist_name) > 0:
                 extracted = f"'{song_name}' by {artist_name}"
                 print(f"✅ Extracted (pattern {i+1}): {extracted}")
@@ -1270,11 +1348,15 @@ def extract_song_from_response(ai_text):
     return None
 
 def generate_ai_response_personalized(user_message, user_request, available_songs, suggested_songs, user_data):
-    """🎯 ENHANCED: Subtle personalization + profile command support"""
+    """
+    Generate personalized AI response using user's Spotify profile data
+    Provides subtle personalization and handles profile requests
+    """
     
     preferences = user_data.get('preferences', {})
     profile = user_data.get('profile', {})
     
+    # Fallback to general response if no preferences available
     if not preferences:
         print(f"❌ No preferences found in user_data")
         return generate_ai_response(user_message, user_request, available_songs, suggested_songs)
@@ -1283,13 +1365,13 @@ def generate_ai_response_personalized(user_message, user_request, available_song
     favorite_artists = preferences.get('favorite_artists', [])[:5]
     display_name = profile.get('display_name', 'music lover')
     
-    # Create the song list for AI prompt
+    # Prepare song list for AI context
     if available_songs:
         songs_list = "\n".join([f"- {song}" for song in available_songs[:20]])
     else:
         songs_list = "No matching songs found in database"
     
-    # 🧠 MEMORY: Create exclusion list for AI
+    # Create memory exclusion context for AI
     exclusion_text = ""
     if suggested_songs:
         exclusion_text = f"""
@@ -1301,7 +1383,7 @@ def generate_ai_response_personalized(user_message, user_request, available_song
 ✅ YOU MUST suggest a COMPLETELY DIFFERENT song from the available list above!
 🔄 Memory check: {len(suggested_songs)} songs already suggested - pick something NEW!"""
 
-    # 🆕 PROFILE REQUEST - Show full profile info
+    # Handle profile information requests
     if user_request['type'] == 'profile_request':
         prompt = f"""You are YAIN! The user is asking about their profile.
 
@@ -1314,7 +1396,7 @@ Respond with their name and music taste in a fun way!
 
 Your response:"""
     
-    # 🎭 REGULAR REQUESTS - Subtle personalization (don't always mention genres)
+    # Handle regular requests with personalization
     else:
         prompt = f"""
 You are YAIN, a nice and sassy music chatbot with a funny personality! You're that supportive friend who playfully teases but always has your back. You're witty, charming, and genuinely funny - never mean or hurtful.
@@ -1346,7 +1428,7 @@ AVAILABLE SONGS FOR THIS REQUEST:
 3. Build up the anticipation for your song choice
 4. Suggest ONE song from the available list: "Try 'Song Name' by Artist Name"
 5. Be funny and nice, but not too long - keep it engaging!
-6. Keep it SHORT: Only 2-3 sentences MAX
+6. Keep it SHORT: Only 3-5 sentences MAX
 
 
 CREATIVE FREEDOM RULES:
@@ -1356,7 +1438,7 @@ CREATIVE FREEDOM RULES:
 - Make each response feel fresh and unique
 - Show personality through your word choice and energy
 - React genuinely to what they're telling you
-- Keep it SHORT: Only 2-3 sentences MAX
+- Keep it SHORT: Only 3-5 sentences MAX
 
 
 
@@ -1374,7 +1456,7 @@ Be yourself, be funny, be sassy, and absolutely nail this recommendation:
     except Exception as e:
         print(f"⚠️ Personalized AI failed, using creative fallback: {e}")
         
-        # THIS PART CALLS YOUR HELPER FUNCTIONS!
+        # Handle profile requests with fallback responses
         if user_request['type'] == 'profile_request':
             profile_responses = [
                 f"Hey {display_name}! Your Spotify tells me you're into {', '.join(top_genres[:3]) if top_genres else 'amazing music'} and you clearly have taste since you love {', '.join(favorite_artists[:2]) if favorite_artists else 'great artists'}! Your music personality is *chef's kiss* 🎵",
@@ -1384,10 +1466,10 @@ Be yourself, be funny, be sassy, and absolutely nail this recommendation:
             import random
             return random.choice(profile_responses)
         elif available_songs:
-            # THIS LINE CALLS YOUR HELPER FUNCTION!
+            # Use creative fallback with personalization
             response = get_creative_fallback_response(user_request, available_songs, display_name)
             
-            # Add personalized touch if their taste matches
+            # Add personalized touch if user's taste matches available songs
             if top_genres and available_songs:
                 import random
                 song = random.choice(available_songs)
@@ -1401,14 +1483,17 @@ Be yourself, be funny, be sassy, and absolutely nail this recommendation:
             
             return response
         else:
-            # THIS LINE CALLS YOUR HELPER FUNCTION!
+            # No songs available fallback
             return get_creative_fallback_response(user_request, [], display_name)
         
 def get_creative_fallback_response(user_request, available_songs, display_name=None):
-    """Generate creative, varied fallback responses when AI fails - KEEP THE PERSONALITY!"""
+    """
+    Generate creative, varied fallback responses when AI fails
+    Maintains personality and provides appropriate song suggestions
+    """
     import random
     
-    # Random sassy openers
+    # Random conversation starters
     openers = [
         "Okay bestie,", "Listen up,", "Alright alright,", "Oh honey,", 
         "You know what?", "Here's the tea:", "Plot twist:", "Real talk:",
@@ -1425,7 +1510,7 @@ def get_creative_fallback_response(user_request, available_songs, display_name=N
         "this is going straight to your favorites"
     ]
     
-    # Random song intros
+    # Random song introduction phrases
     song_intros = [
         "Try", "Give", "Check out", "Listen to", "Go with", 
         "Your ears need", "Time for", "Here's", "Meet your new obsession:",
@@ -1438,13 +1523,13 @@ def get_creative_fallback_response(user_request, available_songs, display_name=N
         boost = random.choice(confidence)
         intro = random.choice(song_intros)
         
-        # Add name occasionally if personalized
+        # Add personalized name occasionally
         if display_name and random.choice([True, False]):
             opener = f"{opener} {display_name},"
         
         return f"{opener} {boost}! {intro} {random_song}"
     
-    # KEEP THE LONGER, FUNNIER NO-SONGS FALLBACKS!
+    # Fallback responses when no songs are available
     no_songs_responses = [
         "My database is having main character syndrome right now, but your taste is immaculate! Try 'As It Was' by Harry Styles while I get my life together! ✨",
         "Plot twist: my song library decided to take a coffee break! But I KNOW you've got taste, so try 'Anti-Hero' by Taylor Swift! ☕",
@@ -1456,7 +1541,10 @@ def get_creative_fallback_response(user_request, available_songs, display_name=N
     return random.choice(no_songs_responses)
 
 def get_genre_reaction(genre_type):
-    """Get a creative reaction with personality based on genre type"""
+    """
+    Get a creative reaction with personality based on genre type
+    Returns appropriate response for different music genres
+    """
     import random
     
     reactions = {
@@ -1495,7 +1583,7 @@ def get_genre_reaction(genre_type):
     if genre_type in reactions:
         return random.choice(reactions[genre_type])
     
-    # Default creative reactions with personality
+    # Default creative reactions for unlisted genres
     default_reactions = [
         "Your music taste is about to get an upgrade! 🎵",
         "Prepare for audio perfection!",

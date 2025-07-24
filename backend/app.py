@@ -8,8 +8,6 @@
 # YAIN Backend Application
 # Main Flask app for handling music requests and AI interactions
 
-
-
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 from dotenv import load_dotenv
@@ -17,74 +15,81 @@ from flask import send_from_directory
 from flask import session
 import os
 
-# Import our organized services (NO USER SERVICES)
+# Import service modules for music processing and user management
 from services import (
-    # Spotify functions
+    # Spotify integration functions
     get_trending_songs, 
     search_spotify_song, 
     search_specific_genre, 
-    search_artist_songs,  # ✅ Clean import
+    search_artist_songs,
     SPOTIFY_ENABLED,
-    # AI functions  
+    # AI processing functions  
     analyze_user_request, 
     generate_ai_response, 
     extract_song_from_response,
     generate_ai_response_personalized, 
-    # Memory functions
+    # Memory management functions
     filter_trending_songs, 
     create_memory_stats, 
     validate_memory_system,
-    # YouTube functions
+    # YouTube integration functions
     search_youtube_song, 
     YOUTUBE_ENABLED,
     
+    # User authentication and profile management
     spotify_auth,
     create_user_profile,
     UserPreferenceManager
 )
 
-# Load environment variables
+# Load environment variables from .env file
 load_dotenv()
 
 app = Flask(__name__)
+
+# Configure CORS for cross-origin requests from frontend
 CORS(app, 
      origins=["http://localhost:3000", "https://yain.onrender.com", "http://localhost:5000", "http://127.0.0.1:5000"], 
      supports_credentials=True,
      allow_headers=["Content-Type", "Authorization", "Cache-Control"],
      methods=["GET", "POST", "OPTIONS"])
 
+# Set secret key for session management
 app.secret_key = os.getenv('FLASK_SECRET_KEY', 'a0bd5d3d53829ba6afe0b193bff1ae3a58ca87e20aa78ffc71a5fb82033bd4ee')
 
+# Configure session settings based on environment
 if os.getenv('ENVIRONMENT') == 'production' or 'render.com' in os.getenv('RENDER_EXTERNAL_URL', ''):
-    # Production settings (HTTPS required)
+    # Production settings require HTTPS for secure cookies
     app.config['SESSION_COOKIE_SECURE'] = True
     app.config['SESSION_COOKIE_HTTPONLY'] = True
     app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
-    app.config['SESSION_PERMANENT'] = True  # ✅ Changed to True
+    app.config['SESSION_PERMANENT'] = True
     print("🔒 Production session config loaded (HTTPS required)")
 else:
-    # Development settings (works with HTTP)
+    # Development settings allow HTTP for local testing
     app.config['SESSION_COOKIE_SECURE'] = False  # Allow HTTP for local dev
     app.config['SESSION_COOKIE_HTTPONLY'] = True
     app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
-    app.config['SESSION_PERMANENT'] = True  # ✅ Changed to True
+    app.config['SESSION_PERMANENT'] = True
     print("🛠️ Development session config loaded (HTTP allowed)")
 
-# Session lifetime - this will now actually work
+# Set session lifetime duration
 from datetime import timedelta
 app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(hours=24) 
 
 @app.route('/')
 def home():
+    """Serve the main frontend HTML file"""
     return send_from_directory('../frontend', 'index.html')
 
 @app.route('/<path:filename>')
 def serve_static(filename):
+    """Serve static frontend files (CSS, JS, images)"""
     return send_from_directory('../frontend', filename)
 
 @app.route('/trending')
 def get_trending():
-    """Get current trending songs"""
+    """API endpoint to retrieve current trending songs with metadata"""
     trending_songs = get_trending_songs()
     return jsonify({
         "trending_songs": trending_songs,
@@ -94,7 +99,7 @@ def get_trending():
 
 @app.route('/test-spotify')
 def test_spotify():
-    """Test if Spotify is working"""
+    """Test endpoint to verify Spotify API functionality"""
     if not SPOTIFY_ENABLED:
         return jsonify({"error": "Spotify not configured"})
     
@@ -106,7 +111,7 @@ def test_spotify():
 
 @app.route('/test-youtube')
 def test_youtube():
-    """Test if YouTube is working"""
+    """Test endpoint to verify YouTube API functionality"""
     if not YOUTUBE_ENABLED:
         return jsonify({"error": "YouTube not configured"})
     
@@ -118,7 +123,7 @@ def test_youtube():
 
 @app.route('/test-both')
 def test_both():
-    """Test both Spotify and YouTube"""
+    """Test endpoint to verify both Spotify and YouTube APIs simultaneously"""
     test_query = "Blinding Lights The Weeknd"
     
     results = {
@@ -133,7 +138,7 @@ def test_both():
 
 @app.route('/test-genre/<query>')
 def test_genre(query):
-    """🎯 Test the genre detection system"""
+    """Test endpoint for genre detection and search functionality"""
     user_request = analyze_user_request(query)
     songs = search_specific_genre(user_request) if user_request['type'] != 'general' else []
     
@@ -148,7 +153,7 @@ def test_genre(query):
 
 @app.route('/test-memory')
 def test_memory():
-    """🧠 Test the memory system"""
+    """Test endpoint for memory filtering system functionality"""
     test_suggested = ["September by Earth, Wind & Fire", "Blinding Lights by The Weeknd"]
     trending = get_trending_songs()
     filtered = filter_trending_songs(trending, test_suggested)
@@ -163,7 +168,7 @@ def test_memory():
 
 @app.route('/test-hindi')
 def test_hindi():
-    """🇮🇳 Test Hindi/Bollywood detection and search"""
+    """Test endpoint for Hindi/Bollywood music detection and search"""
     test_queries = ["give me some hindi song", "bollywood music", "arijit singh"]
     results = {}
     
@@ -182,25 +187,23 @@ def test_hindi():
         "results": results
     })
 
-
 @app.route('/health')
 def health():
+    """Health check endpoint for monitoring service status"""
     return {"status": "healthy", "spotify": SPOTIFY_ENABLED, "youtube": YOUTUBE_ENABLED}
-
-# Add these routes to your app.py file (after your test routes, before /chat route)
 
 @app.route('/auth/spotify')
 def auth_spotify():
-    """Get Spotify authorization URL"""
+    """Initiate Spotify OAuth authentication process"""
     try:
-        # Generate a unique user ID for this session
+        # Generate unique user ID for this authentication session
         import uuid
         from flask import session
         
         user_id = str(uuid.uuid4())
         session['pending_user_id'] = user_id
         
-        # Get auth URL
+        # Request authorization URL from Spotify
         auth_url = spotify_auth.get_auth_url(user_id)
         
         if auth_url:
@@ -214,17 +217,18 @@ def auth_spotify():
 
 @app.route('/callback')
 def spotify_callback():
-    """Handle Spotify OAuth callback - ENHANCED ERROR HANDLING"""
+    """Handle Spotify OAuth callback after user authorization"""
     try:
         from flask import request, session, redirect
         
+        # Extract callback parameters
         code = request.args.get('code')
         state = request.args.get('state')  # This is the user_id
         error = request.args.get('error')
         
         print(f"📥 Callback received - Code: {bool(code)}, State: {state}, Error: {error}")
         
-        # Check if spotify_auth is available
+        # Check if spotify authentication handler is available
         if not spotify_auth:
             print("❌ Spotify auth handler not initialized")
             return """
@@ -242,6 +246,7 @@ def spotify_callback():
             </html>
             """
         
+        # Handle authorization errors
         if error:
             print(f"❌ Authorization error: {error}")
             return f"""
@@ -258,6 +263,7 @@ def spotify_callback():
             </html>
             """
         
+        # Validate required parameters
         if not code or not state:
             print("❌ Missing authorization code or state")
             return """
@@ -274,7 +280,7 @@ def spotify_callback():
             </html>
             """
         
-        # Get access token
+        # Exchange authorization code for access token
         print(f"🔄 Getting access token for user {state}...")
         token_info = spotify_auth.get_user_token(code, state)
         
@@ -294,13 +300,13 @@ def spotify_callback():
             </html>
             """
         
-        # Create user profile
+        # Create user profile from Spotify data
         print(f"👤 Creating user profile...")
         access_token = token_info['access_token']
         user_profile = create_user_profile(access_token)
         
         if user_profile:
-            # Store user info in session
+            # Store user session data
             session['user_id'] = user_profile['user_id']
             session['access_token'] = access_token
             session['connected'] = True
@@ -309,6 +315,7 @@ def spotify_callback():
             
             print(f"✅ User connected successfully: {user_profile['profile']['display_name']}")
             
+            # Return success page with JavaScript to notify parent window
             return f"""
             <html>
             <head><title>Spotify Connected</title></head>
@@ -366,9 +373,10 @@ def spotify_callback():
         </body>
         </html>
         """
+
 @app.route('/user/profile')
 def get_user_profile():
-    """Get current user profile - IMPROVED VERSION"""
+    """Retrieve current user's Spotify profile and preferences"""
     try:
         from flask import session
         
@@ -377,16 +385,17 @@ def get_user_profile():
         user_id = session.get('user_id')
         connected = session.get('connected', False)
         
+        # Validate user authentication
         if not user_id or not connected:
             print(f"❌ Not connected - user_id: {user_id}, connected: {connected}")
             return jsonify({"error": "Not connected"}), 401
         
-        # Try to get from session first (faster)
+        # Try to get profile from session cache first for faster response
         if 'profile_data' in session:
             print(f"⚡ Returning cached profile data for {user_id}")
             return jsonify(session['profile_data'])
         
-        # Fallback: get from storage
+        # Fallback to persistent storage
         user_data = UserPreferenceManager.get_user_profile(user_id)
         if user_data:
             print(f"💾 Returning stored profile data for {user_id}")
@@ -396,19 +405,19 @@ def get_user_profile():
             print(f"❌ Profile not found for user {user_id}")
             return jsonify({"error": "Profile not found"}), 404
         
-            
     except Exception as e:
         print(f"❌ Profile error: {e}")
         import traceback
         traceback.print_exc()
         return jsonify({"error": str(e)}), 500
+
 @app.route('/user/disconnect', methods=['POST'])
 def disconnect_user():
-    """Disconnect user"""
+    """Disconnect user by clearing their session data"""
     try:
         from flask import session
         
-        # Clear session
+        # Clear all session data
         session.clear()
         
         return jsonify({"message": "Disconnected successfully"})
@@ -419,21 +428,21 @@ def disconnect_user():
     
 @app.route('/chat', methods=['POST'])
 def chat():
-    """🧠 MAIN CHAT ENDPOINT - NOW WITH WORKING PERSONALIZATION + FALLBACK LOGIC!"""
+    """Main chat endpoint - processes user requests and returns personalized music recommendations"""
     try:
         data = request.get_json()
         user_message = data.get('message', '')
-        suggested_songs = data.get('suggested_songs', [])  # 🧠 Memory from frontend
+        suggested_songs = data.get('suggested_songs', [])  # Memory from frontend
         
         print(f"\n🎵 ===== NEW CHAT REQUEST =====")
         print(f"👤 User message: {user_message}")
         print(f"🧠 Memory received: {len(suggested_songs)} previous suggestions")
         
-        # 🧠 VALIDATE MEMORY SYSTEM
+        # Validate memory system integrity
         memory_validation = validate_memory_system(suggested_songs)
         print(f"🔍 Memory validation: {memory_validation['status']} - {memory_validation['message']}")
         
-        # 🔐 CHECK FOR SPOTIFY PERSONALIZATION - ENHANCED WITH FALLBACK
+        # Check for Spotify personalization with fallback handling
         user_id = session.get('user_id')
         is_personalized = bool(user_id and session.get('connected', False))
         user_data = None
@@ -442,12 +451,12 @@ def chat():
             print(f"🎯 PERSONALIZED MODE: User {user_id} connected")
             user_data = UserPreferenceManager.get_user_profile(user_id)
 
-            # 🔧 FIX #6: Fallback to session data if manager data lost
+            # Fallback to session data if manager data is lost
             if not user_data and 'profile_data' in session:
                 print(f"🔄 User data not in manager, using session fallback")
                 user_data = session['profile_data']
                 
-                # Restore to manager for future requests
+                # Restore data to manager for future requests
                 if user_data and 'profile' in user_data and 'preferences' in user_data:
                     UserPreferenceManager.save_user_profile(
                         user_id, 
@@ -466,41 +475,44 @@ def chat():
         else:
             print(f"🌍 GENERAL MODE: No Spotify connection")
         
-        # 🎯 ANALYZE what the user actually wants
+        # Analyze user request to determine intent and music preferences
         user_request = analyze_user_request(user_message)
         print(f"🎯 Detected: {user_request['type']} - {user_request['genre_hint']}")
+        
+        # Handle special creator request
         if user_request['type'] == 'creator_request':
             creator_response = "My glorious queen, the most perfect, talented, amazing, successful, brilliant, genius, incredible, outstanding, phenomenal, extraordinary, magnificent, wonderful, fantastic, marvelous, spectacular, divine, legendary, iconic, flawless, unstoppable, powerful, inspiring, innovative, creative, beautiful, intelligent, wise, awesome, epic, mind-blowing, jaw-dropping, breathtaking, stunning, dazzling, radiant, celestial, goddess-tier Samia Islam! 🙂‍↕️🙂‍↕️"
         
             simple_memory_stats = {
-        "songs_remembered": len(suggested_songs),
-        "request_type": "creator_request",
-        "memory_working": True,
-        "memory_active": True
-    }
+                "songs_remembered": len(suggested_songs),
+                "request_type": "creator_request",
+                "memory_working": True,
+                "memory_active": True
+            }
     
             return jsonify({
-        "response": creator_response,
-        "spotify": None,
-        "youtube": None,
-        "memory_stats": simple_memory_stats,
-        "personalized": False
-    })
+                "response": creator_response,
+                "spotify": None,
+                "youtube": None,
+                "memory_stats": simple_memory_stats,
+                "personalized": False
+            })
     
-    # 🔐 CHECK FOR SPOTIFY PERSONALIZATION - ENHANCED WITH FALLBACK
+        # Process different request types to find available songs
         user_id = session.get('user_id')
-        # 🎵 HANDLE SPECIFIC SONG SEARCH (NEW!)
+        
+        # Handle profile information requests
         if user_request['type'] == 'profile_request':
             print(f"👤 Profile request detected")
             available_songs = []  # No song search needed for profile requests
         
-        # 🎵 HANDLE SPECIFIC SONG SEARCH
+        # Handle specific song requests
         elif user_request['type'] == 'specific_song':
             search_query = user_request['search_query']
             available_songs = [search_query]
             print(f"🎯 Targeting specific song: {search_query}")
 
-        # 🎤 HANDLE ARTIST SEARCH
+        # Handle artist-specific requests
         elif user_request['type'] == 'artist_search':
             artist_name = user_request['artist_name']
             artist_id = user_request.get('artist_id')  # May be provided by dynamic detection
@@ -509,13 +521,13 @@ def chat():
             if artist_id:
                 print(f"🎯 Using Spotify Artist ID: {artist_id}")
 
-        # 🎵 HANDLE GENRE/MOOD REQUESTS - ENHANCED PERSONALIZATION
+        # Handle genre/mood requests with personalization enhancement
         elif user_request['type'] != 'general':
-            # 🎯 PERSONALIZED SEARCH (if user is connected to Spotify)
+            # Use personalized search if user is connected to Spotify
             if is_personalized and user_data:
                 print(f"🎯 PERSONALIZED SEARCH for {user_request['type']}")
                 
-                # 🔧 FIX: Get personalized search terms based on user's actual Spotify taste
+                # Get personalized search terms based on user's Spotify taste
                 personalized_terms = UserPreferenceManager.get_personalized_search_terms(
                     user_id, user_request['type']
                 )
@@ -523,7 +535,7 @@ def chat():
                 if personalized_terms:
                     print(f"🎵 Using personalized terms: {personalized_terms}")
                     
-                    # 🔧 FIX: Create enhanced user_request with personalized terms at the FRONT
+                    # Create enhanced user request with personalized terms at the front
                     enhanced_request = user_request.copy()
                     # Put personalized terms first, then add some original terms
                     enhanced_request['search_terms'] = personalized_terms + user_request['search_terms'][:3]
@@ -531,7 +543,7 @@ def chat():
                     available_songs = search_specific_genre(enhanced_request)
                     print(f"🎯 Found {len(available_songs)} personalized songs")
                     
-                    # 🔧 FIX: If personalized search yields few results, supplement with general search
+                    # If personalized search yields few results, supplement with general search
                     if len(available_songs) < 10:
                         print(f"🔄 Supplementing with general search (only {len(available_songs)} personalized results)")
                         general_songs = search_specific_genre(user_request)
@@ -544,19 +556,19 @@ def chat():
                     available_songs = search_specific_genre(user_request)
                     print(f"🌍 Personalized fallback: Found {len(available_songs)} songs for {user_request['type']}")
             
-            # 🌍 NON-PERSONALIZED SEARCH (user not connected to Spotify)
+            # Non-personalized search for users not connected to Spotify
             else:
                 available_songs = search_specific_genre(user_request)
                 print(f"🎵 Found {len(available_songs)} songs for {user_request['type']}")
 
-        # 🌍 GENERAL REQUEST - USE TRENDING SONGS
+        # Handle general requests using trending songs
         else:
             print(f"🌍 Using trending songs for general request")
             trending_songs = get_trending_songs()
             available_songs = trending_songs
             print(f"🔥 Loaded {len(available_songs)} trending songs")
 
-        # 🧠 MEMORY: Filter out already suggested songs (UPDATED!)
+        # Apply memory filtering to avoid repeating songs
         original_count = len(available_songs)
         
         if user_request['type'] == 'specific_song':
@@ -570,10 +582,10 @@ def chat():
         if filtered_count == 0:
             print(f"⚠️ No songs available after memory filtering!")
         
-        # 🤖 Generate AI response - ENHANCED PERSONALIZATION
+        # Generate AI response with appropriate personalization
         print(f"🤖 Generating AI response...")
         
-        # 🔧 FIX: Ensure we pass user data for personalized responses
+        # Use personalized AI response if user data is available
         if is_personalized and user_data:
             print(f"🎯 Using PERSONALIZED AI response")
             ai_text = generate_ai_response_personalized(
@@ -585,19 +597,20 @@ def chat():
         
         print(f"✅ AI response: {ai_text}")
         
-        # 🔍 Extract song and search both platforms
+        # Extract song recommendation from AI response
         song_query = extract_song_from_response(ai_text)
         print(f"🔍 Extracted query: {song_query}")
         
-        # 🎵 FOR SPECIFIC SONG REQUESTS - use the original search query if extraction fails
+        # For specific song requests, use original search query if extraction fails
         if user_request['type'] == 'specific_song' and not song_query:
             song_query = user_request['search_query']
             print(f"🎯 Using original specific song query: {song_query}")
         
         spotify_data = None
         youtube_data = None
-        actual_song_for_memory = None  # 🧠 Track what we actually return
+        actual_song_for_memory = None  # Track what we actually return
         
+        # Search for song on both platforms if query exists
         if song_query:
             print(f"🎧 Searching Spotify for: {song_query}")
             if SPOTIFY_ENABLED:
@@ -619,7 +632,7 @@ def chat():
                 else:
                     print(f"❌ YouTube search failed for: {song_query}")
         
-        # 🧠 FALLBACK: If no song found, try first available song (except for specific songs)
+        # Fallback: try first available song if no results found (except for specific songs)
         if not spotify_data and not youtube_data and available_songs and user_request['type'] != 'specific_song':
             print(f"🔄 No song found, trying first available: {available_songs[0]}")
             fallback_query = available_songs[0]
@@ -636,7 +649,7 @@ def chat():
                     actual_song_for_memory = f"'{youtube_data['title']}' by {youtube_data['channel']}"
                     print(f"✅ Fallback YouTube: {actual_song_for_memory}")
         
-        # 🧠 CRITICAL: Validate new song against memory before returning (skip for specific songs)
+        # Validate new song against memory before returning (skip for specific songs)
         if actual_song_for_memory and user_request['type'] != 'specific_song':
             memory_check = validate_memory_system(suggested_songs, actual_song_for_memory)
             if not memory_check['valid']:
@@ -654,13 +667,13 @@ def chat():
                                 print(f"✅ Found alternative: {actual_song_for_memory}")
                                 break
         
-        # 🧠 CRITICAL: Track actual returned song for memory
+        # Track actual returned song for memory
         if actual_song_for_memory:
             print(f"🧠 Will track in memory: {actual_song_for_memory}")
         else:
             print(f"⚠️ No actual song found - memory won't be updated")
         
-        # 📊 Create memory statistics
+        # Create comprehensive memory statistics
         memory_stats = {
             "songs_remembered": len(suggested_songs),
             "songs_available_before_filter": original_count,
@@ -682,17 +695,17 @@ def chat():
             "spotify": spotify_data,
             "youtube": youtube_data,
             "memory_stats": memory_stats,
-            "personalized": is_personalized,  # ✅ Shows TRUE when Spotify connected
-            "user_id": user_id if is_personalized else None,  # ✅ Shows actual user ID
+            "personalized": is_personalized,  # Shows TRUE when Spotify connected
+            "user_id": user_id if is_personalized else None,  # Shows actual user ID
             
-            # 🆕 ENHANCED: User's actual music preferences when connected
+            # Enhanced user music preferences when connected
             "user_preferences": {
                 "display_name": user_data['profile']['display_name'] if is_personalized and user_data else None,
                 "top_genres": user_data['preferences']['top_genres'][:5] if is_personalized and user_data else [],
                 "favorite_artists": user_data['preferences']['favorite_artists'][:5] if is_personalized and user_data else [],
                 "personalization_active": is_personalized,
-                "personalized_search_used": bool(is_personalized and user_data),  # 🆕 Track if personalized search was used
-                "fallback_used": bool(is_personalized and 'profile_data' in session and not UserPreferenceManager.get_user_profile(user_id))  # 🆕 Track fallback usage
+                "personalized_search_used": bool(is_personalized and user_data),  # Track if personalized search was used
+                "fallback_used": bool(is_personalized and 'profile_data' in session and not UserPreferenceManager.get_user_profile(user_id))  # Track fallback usage
             } if is_personalized else None
         }
         
@@ -721,6 +734,7 @@ def chat():
                 "memory_active": False
             }
         }), 500
+
 if __name__ == '__main__':
     import os
     port = int(os.environ.get('PORT', 5000))
