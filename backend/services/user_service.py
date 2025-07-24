@@ -5,621 +5,364 @@
 # For demo and educational use only — not for commercial use.
 # ------------------------------------------------------------
 
-# Spotify Web API integration module
-# Handles track searches, genre filtering, and trending song retrieval with caching optimization
+# User Service for Spotify Authentication and Profile Management
+# This module handles user authentication with Spotify, profile creation,
+# and music preference analysis.
 
 import spotipy
-from spotipy.oauth2 import SpotifyClientCredentials
+from spotipy.oauth2 import SpotifyOAuth
 import os
+import json
 import time
-import random
-import re
-from threading import Thread
-from concurrent.futures import ThreadPoolExecutor, as_completed
+from datetime import datetime, timedelta
 
-# Cache configuration for performance optimization
-trending_cache = {
-    'songs': [],
-    'last_updated': 0,
-    'cache_duration': 3600  # 1 hour cache expiration
-}
+# 🔐 Spotify OAuth Configuration
+SPOTIFY_SCOPE = [
+    'user-read-private',           # Read user profile
+    'user-read-email',             # Read user email
+    'user-top-read',               # Read top artists and tracks
+    'user-library-read',           # Read saved tracks
+    'playlist-read-private',       # Read private playlists
+    'playlist-read-collaborative', # Read collaborative playlists
+    'user-read-recently-played',   # Read listening history
+]
 
-# Search result cache to prevent duplicate API calls
-search_cache = {}
-cache_ttl = 1800  # 30 minute cache TTL
+# 🗄️ In-memory user storage (replace with database later)
+user_profiles = {}
 
-def init_spotify():
-    """
-    Initialize Spotify Web API client with application credentials
+class SpotifyUserAuth:
+    """🔐 Handle Spotify OAuth and user authentication"""
     
-    Returns:
-        tuple: (spotify_client, enabled_status) - Client instance and boolean status
-    """
-    try:
-        spotify_credentials = SpotifyClientCredentials(
-            client_id=os.getenv('SPOTIFY_CLIENT_ID'),
-            client_secret=os.getenv('SPOTIFY_CLIENT_SECRET')
-        )
-        spotify = spotipy.Spotify(client_credentials_manager=spotify_credentials)
-        return spotify, True
-    except:
-        print("Spotify credentials not found")
-        return None, False
-
-# Initialize client on module import
-spotify, SPOTIFY_ENABLED = init_spotify()
-
-def search_spotify_song(query):
-    """
-    Search Spotify for a specific song with caching and optimized API usage
+    # In user_service.py - CORRECT
+def __init__(self):
+    self.client_id = os.getenv('SPOTIFY_CLIENT_ID')
+    self.client_secret = os.getenv('SPOTIFY_CLIENT_SECRET')
     
-    Args:
-        query (str): Song search query in format "'Song' by Artist"
-        
-    Returns:
-        dict: Track metadata including name, artist, URLs, and match score
-        None: If no suitable match found or API unavailable
-    """
-    if not SPOTIFY_ENABLED:
-        return None
-    
-    print(f"\n=== SPOTIFY SEARCH ===")
-    print(f"Query: {query}")
-    
-    # Check cache before making API call
-    cache_key = query.lower().strip()
-    current_time = time.time()
-    
-    if cache_key in search_cache:
-        cached_result, cached_time = search_cache[cache_key]
-        if current_time - cached_time < cache_ttl:
-            print(f"Cache hit! Returning cached result for: {query}")
-            return cached_result
-    
-    try:
-        # Parse query string to extract song and artist components
-        song_name, artist_name = extract_song_and_artist(query)
-        
-        if not song_name or not artist_name:
-            print(f"Could not parse song and artist from query")
-            return None
-        
-        print(f"Searching for: '{song_name}' by '{artist_name}'")
-        
-        # Define search strategies ordered by accuracy
-        search_strategies = [
-            f'track:"{song_name}" artist:"{artist_name}"',  # Exact field matching
-            f'"{song_name}" "{artist_name}"'                # General search fallback
-        ]
-        
-        best_match = None
-        best_score = 0.0
-        
-        for i, strategy in enumerate(search_strategies, 1):
-            print(f"Strategy {i}/2: {strategy}")
-            
-            try:
-                # Execute search with single market for consistency
-                results = spotify.search(q=strategy, type='track', limit=5, market='US')
-                tracks = results['tracks']['items']
-                
-                if not tracks:
-                    print(f"  No results")
-                    continue
-                
-                print(f"  Found {len(tracks)} results")
-                
-                # Score top results to find best match
-                for j, track in enumerate(tracks[:3]):
-                    if not track:
-                        continue
-                        
-                    score = calculate_match_score(
-                        song_name, artist_name,
-                        track['name'], track['artists'][0]['name']
-                    )
-                    
-                    print(f"  {track['name']} by {track['artists'][0]['name']} (score: {score:.2f})")
-                    
-                    if score > best_score:
-                        best_score = score
-                        best_match = track
-                        print(f"  NEW BEST! Score: {score:.2f}")
-                
-                # Early termination for high-confidence matches
-                if best_score >= 0.8:
-                    print(f"High-confidence match found (score: {best_score:.2f}), stopping search")
-                    break
-                    
-            except Exception as e:
-                print(f"  Error: {e}")
-                continue
-        
-        # Process and format result
-        result = None
-        if best_match and best_score >= 0.6:
-            result = {
-                'name': best_match['name'],
-                'artist': best_match['artists'][0]['name'],
-                'album': best_match['album']['name'],
-                'preview_url': best_match['preview_url'],
-                'spotify_url': best_match['external_urls']['spotify'],
-                'image_url': best_match['album']['images'][0]['url'] if best_match['album']['images'] else None,
-                'popularity': best_match['popularity'],
-                'match_score': best_score
-            }
-            
-            print(f"Found: '{result['name']}' by {result['artist']} (score: {best_score:.2f})")
-        else:
-            print(f"No suitable match found (best score: {best_score:.2f})")
-        
-        # Cache result for future requests
-        search_cache[cache_key] = (result, current_time)
-        
-        return result
-                
-    except Exception as e:
-        print(f"Spotify search error: {e}")
-        return None
-
-def search_specific_genre_optimized(genre_info):
-    """
-    Search for songs within specific genre using parallel processing
-    
-    Args:
-        genre_info (dict): Genre metadata containing type and search terms
-        
-    Returns:
-        list: List of formatted song strings matching the genre
-    """
-    if not SPOTIFY_ENABLED:
-        return []
-    
-    found_songs = []
-    genre_type = genre_info['type']
-    
-    # Limit search terms for performance optimization
-    search_terms = genre_info['search_terms'][:8]
-    
-    # Select optimal markets based on genre type
-    if genre_type == 'bengali':
-        markets = ['IN', 'US']
-    elif genre_type in ['tamil', 'telugu', 'punjabi', 'hindi_bollywood']:
-        markets = ['IN', 'US']
-    elif genre_type == 'afrobeats':
-        markets = ['NG', 'US']
-    elif genre_type == 'kpop':
-        markets = ['KR', 'US']
+    # 🔧 FIX: Correct redirect URI for both dev and production
+    if os.getenv('ENVIRONMENT') == 'production' or 'render.com' in os.getenv('RENDER_EXTERNAL_URL', ''):
+        self.redirect_uri = 'https://yain.onrender.com/callback'
     else:
-        markets = ['US']  # Default to US market
+        self.redirect_uri = 'http://localhost:5000/callback'  # Port 5000, not 8080
     
-    print(f"Genre search: {len(search_terms)} terms in {len(markets)} markets")
-    
-    # Parallel search function for threading
-    def search_term_in_market(term, market):
+    print(f"🔗 Using redirect URI: {self.redirect_uri}")
+    def get_auth_url(self, user_id):
+        """Get Spotify authorization URL for user"""
         try:
-            results = spotify.search(q=term, type='track', limit=10, market=market)
-            songs = []
-            for track in results['tracks']['items']:
-                if track and track['popularity'] > 15:
-                    song_info = f"'{track['name']}' by {track['artists'][0]['name']}"
-                    songs.append(song_info)
-            return songs
+            sp_oauth = SpotifyOAuth(
+                client_id=self.client_id,
+                client_secret=self.client_secret,
+                redirect_uri=self.redirect_uri,
+                scope=' '.join(SPOTIFY_SCOPE),
+                state=user_id,  # Use user_id as state for security
+                show_dialog=True
+            )
+            
+            auth_url = sp_oauth.get_authorize_url()
+            return auth_url
+            
         except Exception as e:
-            print(f"Error searching {term} in {market}: {e}")
+            print(f"❌ Error creating auth URL: {e}")
+            return None
+    
+    def get_user_token(self, code, user_id):
+        """Exchange authorization code for access token"""
+        try:
+            sp_oauth = SpotifyOAuth(
+                client_id=self.client_id,
+                client_secret=self.client_secret,
+                redirect_uri=self.redirect_uri,
+                scope=' '.join(SPOTIFY_SCOPE),
+                state=user_id
+            )
+            
+            token_info = sp_oauth.get_access_token(code)
+            return token_info
+            
+        except Exception as e:
+            print(f"❌ Error getting access token: {e}")
+            return None
+
+class UserProfileAnalyzer:
+    """🎭 Analyze user's Spotify profile and extract music preferences"""
+    
+    def __init__(self, access_token):
+        self.spotify = spotipy.Spotify(auth=access_token)
+        
+    def get_user_profile(self):
+        """Get basic user profile information"""
+        try:
+            user_info = self.spotify.current_user()
+            return {
+                'id': user_info['id'],
+                'display_name': user_info.get('display_name', 'User'),
+                'email': user_info.get('email'),
+                'followers': user_info.get('followers', {}).get('total', 0),
+                'country': user_info.get('country'),
+                'image': user_info.get('images', [{}])[0].get('url') if user_info.get('images') else None
+            }
+        except Exception as e:
+            print(f"❌ Error getting user profile: {e}")
+            return None
+    
+    def get_top_artists(self, time_range='medium_term', limit=50):
+        """Get user's top artists (short/medium/long term)"""
+        try:
+            results = self.spotify.current_user_top_artists(
+                time_range=time_range, 
+                limit=limit
+            )
+            
+            artists = []
+            for artist in results['items']:
+                artists.append({
+                    'name': artist['name'],
+                    'genres': artist['genres'],
+                    'popularity': artist['popularity'],
+                    'spotify_url': artist['external_urls']['spotify']
+                })
+                
+            return artists
+            
+        except Exception as e:
+            print(f"❌ Error getting top artists: {e}")
             return []
     
-    # Execute parallel searches with thread pool
-    with ThreadPoolExecutor(max_workers=4) as executor:
-        futures = []
-        for term in search_terms[:6]:  # Limit concurrent searches
-            for market in markets:
-                future = executor.submit(search_term_in_market, term, market)
-                futures.append(future)
-        
-        # Collect results as they complete with timeout
-        for future in as_completed(futures):
-            try:
-                songs = future.result(timeout=3)  # 3 second timeout per search
-                found_songs.extend(songs)
+    def get_top_tracks(self, time_range='medium_term', limit=50):
+        """Get user's top tracks (short/medium/long term)"""
+        try:
+            results = self.spotify.current_user_top_tracks(
+                time_range=time_range, 
+                limit=limit
+            )
+            
+            tracks = []
+            for track in results['items']:
+                tracks.append({
+                    'name': track['name'],
+                    'artist': track['artists'][0]['name'],
+                    'album': track['album']['name'],
+                    'popularity': track['popularity'],
+                    'spotify_url': track['external_urls']['spotify']
+                })
                 
-                # Early termination when sufficient results found
-                if len(found_songs) >= 30:
-                    break
-            except Exception as e:
-                print(f"Search future failed: {e}")
-                continue
-    
-    # Remove duplicates while preserving order and shuffle results
-    unique_songs = list(dict.fromkeys(found_songs))
-    random.shuffle(unique_songs)
-    
-    print(f"Genre search result: {len(unique_songs)} unique songs for {genre_type}")
-    return unique_songs[:20]  # Return top 20 results
-
-def get_trending_songs_optimized():
-    """
-    Retrieve trending songs using cached results and parallel processing
-    
-    Returns:
-        list: List of formatted trending song strings
-    """
-    if not SPOTIFY_ENABLED:
-        return get_diverse_fallback_songs()
-    
-    current_time = time.time()
-    
-    # Return cached results if still valid
-    if (current_time - trending_cache['last_updated']) < trending_cache['cache_duration']:
-        print(f"Using cached trending songs ({len(trending_cache['songs'])} songs)")
-        return trending_cache['songs']
-    
-    print(f"Refreshing trending cache...")
-    
-    try:
-        trending_songs = []
-        
-        # Define priority search queries for trending content
-        priority_queries = [
-            # Mainstream artists
-            "taylor swift", "drake", "billie eilish", "the weeknd", "dua lipa",
-            "chart hits", "viral hits", "trending songs",
+            return tracks
             
-            # Regional music priorities  
-            "bollywood music", "kpop", "afrobeats", "latin music",
+        except Exception as e:
+            print(f"❌ Error getting top tracks: {e}")
+            return []
+    
+    def get_saved_tracks(self, limit=50):
+        """Get user's saved (liked) tracks"""
+        try:
+            results = self.spotify.current_user_saved_tracks(limit=limit)
             
-            # Genre categories
-            "indie rock", "hip hop", "electronic music", "pop music",
+            tracks = []
+            for item in results['items']:
+                track = item['track']
+                tracks.append({
+                    'name': track['name'],
+                    'artist': track['artists'][0]['name'],
+                    'album': track['album']['name'],
+                    'added_at': item['added_at'],
+                    'spotify_url': track['external_urls']['spotify']
+                })
+                
+            return tracks
             
-            # Era-based searches
-            "80s hits", "90s hits", "2000s hits",
-        ]
-        
-        # Parallel search function for trending queries
-        def search_query(query):
-            try:
-                results = spotify.search(q=query, type='track', limit=15, market='US')
-                songs = []
-                for track in results['tracks']['items']:
-                    if track and track['popularity'] > 30:
-                        song_info = f"'{track['name']}' by {track['artists'][0]['name']}"
-                        songs.append(song_info)
-                return songs
-            except Exception as e:
-                print(f"Error with query '{query}': {e}")
-                return []
-        
-        # Execute parallel searches with timeout handling
-        with ThreadPoolExecutor(max_workers=6) as executor:
-            futures = [executor.submit(search_query, query) for query in priority_queries]
+        except Exception as e:
+            print(f"❌ Error getting saved tracks: {e}")
+            return []
+    
+    def get_user_playlists(self, limit=20):
+        """Get user's playlists"""
+        try:
+            results = self.spotify.current_user_playlists(limit=limit)
             
-            for future in as_completed(futures):
-                try:
-                    songs = future.result(timeout=5)  # 5 second timeout
-                    for song in songs:
-                        if song not in trending_songs:  # Prevent duplicates
-                            trending_songs.append(song)
+            playlists = []
+            for playlist in results['items']:
+                # Skip empty playlists
+                if playlist['tracks']['total'] > 0:
+                    playlists.append({
+                        'name': playlist['name'],
+                        'description': playlist.get('description', ''),
+                        'track_count': playlist['tracks']['total'],
+                        'public': playlist['public'],
+                        'spotify_url': playlist['external_urls']['spotify'],
+                        'id': playlist['id']
+                    })
                     
-                    # Early termination when sufficient results collected
-                    if len(trending_songs) >= 150:
-                        break
-                except Exception as e:
-                    print(f"Future failed: {e}")
-                    continue
-        
-        # Randomize results and update cache
-        random.shuffle(trending_songs)
-        trending_cache['songs'] = trending_songs[:100]  # Store top 100 results
-        trending_cache['last_updated'] = current_time
-        
-        print(f"Cached {len(trending_cache['songs'])} trending songs")
-        return trending_cache['songs']
-        
-    except Exception as e:
-        print(f"Error updating trending songs: {e}")
-        return get_diverse_fallback_songs()
-
-def extract_song_and_artist(query):
-    """
-    Parse query string to extract song name and artist using regex patterns
-    
-    Args:
-        query (str): Query string in various formats
-        
-    Returns:
-        tuple: (song_name, artist_name) or (None, None) if parsing fails
-    """
-    patterns = [
-        r"['\"]([^'\"]+)['\"] by (.+)",  # 'Song' by Artist format
-        r"([^'\"]+) by (.+)",           # Song by Artist format
-    ]
-    
-    for pattern in patterns:
-        match = re.search(pattern, query, re.IGNORECASE)
-        if match:
-            song_name = match.group(1).strip()
-            artist_name = match.group(2).strip()
-            # Clean artist name by removing trailing punctuation
-            artist_name = re.sub(r'[.!?–—,-]+.*$', '', artist_name).strip()
-            return song_name, artist_name
-    
-    return None, None
-
-def calculate_string_similarity(str1, str2):
-    """
-    Calculate similarity score between two strings using word overlap analysis
-    
-    Args:
-        str1, str2 (str): Strings to compare
-        
-    Returns:
-        float: Similarity score between 0.0 and 1.0
-    """
-    if not str1 or not str2:
-        return 0.0
-    
-    def normalize(text):
-        return re.sub(r'[^\w\s]', '', text.lower()).strip()
-    
-    norm1 = normalize(str1)
-    norm2 = normalize(str2)
-    
-    # Check for exact match
-    if norm1 == norm2:
-        return 1.0
-    
-    # Check for substring containment
-    if norm1 in norm2 or norm2 in norm1:
-        return 0.9
-    
-    # Calculate word overlap using Jaccard similarity
-    words1 = set(norm1.split())
-    words2 = set(norm2.split())
-    
-    if not words1 or not words2:
-        return 0.0
-    
-    intersection = len(words1.intersection(words2))
-    union = len(words1.union(words2))
-    
-    return intersection / union if union > 0 else 0.0
-
-def calculate_match_score(target_song, target_artist, result_song, result_artist):
-    """
-    Calculate weighted match score between target and result track metadata
-    
-    Args:
-        target_song, target_artist (str): Expected track information
-        result_song, result_artist (str): API result track information
-        
-    Returns:
-        float: Weighted match score (song 60%, artist 40%)
-    """
-    song_score = calculate_string_similarity(target_song, result_song)
-    artist_score = calculate_string_similarity(target_artist, result_artist)
-    return (song_score * 0.6) + (artist_score * 0.4)
-
-def get_diverse_fallback_songs():
-    """
-    Provide hardcoded song list as fallback when Spotify API is unavailable
-    
-    Returns:
-        list: Curated list of popular songs across various genres and eras
-    """
-    return [
-        "'Anti-Hero' by Taylor Swift", "'God's Plan' by Drake", "'Bad Guy' by Billie Eilish",
-        "'Blinding Lights' by The Weeknd", "'Levitating' by Dua Lipa", "'As It Was' by Harry Styles",
-        "'Heat Waves' by Glass Animals", "'Good 4 U' by Olivia Rodrigo", "'Stay' by The Kid LAROI",
-        "'Jai Ho' by A.R. Rahman", "'Tum Hi Ho' by Arijit Singh", "'Dynamite' by BTS",
-        "'Despacito' by Luis Fonsi", "'Ye' by Burna Boy", "'Essence' by Wizkid",
-        "'Motion Sickness' by Phoebe Bridgers", "'The Less I Know The Better' by Tame Impala",
-        "'Bohemian Rhapsody' by Queen", "'Billie Jean' by Michael Jackson", "'Smells Like Teen Spirit' by Nirvana"
-    ]
-
-def get_smart_songs_from_results(tracks, limit=15):
-    """
-    Apply intelligent selection algorithm to prioritize high-quality tracks
-    
-    Args:
-        tracks (list): List of Spotify track objects
-        limit (int): Maximum number of songs to return
-        
-    Returns:
-        list: Prioritized list of formatted song strings
-    """
-    if not tracks:
-        return []
-    
-    smart_songs = []
-    
-    for track in tracks:
-        if not track:
-            continue
+            return playlists
             
-        # Calculate composite score based on multiple quality factors
-        popularity = track.get('popularity', 0)
-        score = popularity
+        except Exception as e:
+            print(f"❌ Error getting playlists: {e}")
+            return []
+    
+    def analyze_music_preferences(self):
+        """🎯 Comprehensive analysis of user's music taste"""
+        print("🔍 Analyzing user's music preferences...")
         
-        # Apply popularity bonuses
-        if popularity > 70:  # High popularity boost
-            score += 20
-        elif popularity > 50:  # Medium popularity boost
-            score += 10
+        # Get all data
+        top_artists_short = self.get_top_artists('short_term', 20)  # Last 4 weeks
+        top_artists_medium = self.get_top_artists('medium_term', 30)  # Last 6 months
+        top_tracks_short = self.get_top_tracks('short_term', 20)
+        top_tracks_medium = self.get_top_tracks('medium_term', 30)
+        saved_tracks = self.get_saved_tracks(50)
+        playlists = self.get_user_playlists(15)
         
-        # Bonus for preview availability (indicates complete metadata)
-        if track.get('preview_url'):
-            score += 5
+        # Analyze genres
+        all_genres = []
+        for artist in top_artists_short + top_artists_medium:
+            all_genres.extend(artist['genres'])
         
-        # Bonus for explicit content (often indicates higher engagement)
-        if track.get('explicit'):
-            score += 3
+        # Count genre frequency
+        genre_counts = {}
+        for genre in all_genres:
+            genre_counts[genre] = genre_counts.get(genre, 0) + 1
         
-        # Filter out low-popularity tracks
-        if popularity > 15:
-            song_info = f"'{track['name']}' by {track['artists'][0]['name']}"
-            smart_songs.append({
-                'song': song_info,
-                'score': score,
-                'popularity': popularity
+        # Get top genres
+        top_genres = sorted(genre_counts.items(), key=lambda x: x[1], reverse=True)[:10]
+        
+        # Analyze favorite artists
+        artist_counts = {}
+        for artist in top_artists_short + top_artists_medium:
+            name = artist['name']
+            artist_counts[name] = artist_counts.get(name, 0) + 1
+        
+        top_artists = sorted(artist_counts.items(), key=lambda x: x[1], reverse=True)[:15]
+        
+        # Create user music profile
+        music_profile = {
+            'top_genres': [genre for genre, count in top_genres],
+            'favorite_artists': [artist for artist, count in top_artists],
+            'recent_favorites': [track['name'] + ' by ' + track['artist'] for track in top_tracks_short[:10]],
+            'all_time_favorites': [track['name'] + ' by ' + track['artist'] for track in top_tracks_medium[:10]],
+            'saved_songs_count': len(saved_tracks),
+            'playlist_count': len(playlists),
+            'music_diversity': len(set(all_genres)),  # How diverse their taste is
+            'analysis_date': datetime.now().isoformat()
+        }
+        
+        print(f"🎵 Analysis complete! Found {len(top_genres)} genres, {len(top_artists)} artists")
+        return music_profile
+
+class UserPreferenceManager:
+    """💾 Manage user preferences and personalized recommendations"""
+    
+    @staticmethod
+    def save_user_profile(user_id, profile_data, music_preferences):
+        """Save user profile and music preferences"""
+        # 🔧 FIX 1: Use consistent naming - 'preferences' not 'music_preferences'
+        user_profiles[user_id] = {
+            'profile': profile_data,
+            'preferences': music_preferences,  # ✅ Fixed: consistent naming
+            'last_updated': datetime.now().isoformat(),
+            'song_suggestions_history': []  # Track what we've suggested
+        }
+        
+        print(f"💾 Saved profile for user {user_id}")
+        print(f"🎵 Top genres: {music_preferences.get('top_genres', [])[:3]}")
+        print(f"🎤 Favorite artists: {music_preferences.get('favorite_artists', [])[:3]}")
+        return True
+    
+    @staticmethod
+    def get_user_profile(user_id):
+        """Get user profile and preferences"""
+        user_data = user_profiles.get(user_id)
+        if user_data:
+            print(f"📊 Retrieved profile for {user_id}")
+            print(f"🎵 Genres available: {len(user_data.get('preferences', {}).get('top_genres', []))}")
+            print(f"🎤 Artists available: {len(user_data.get('preferences', {}).get('favorite_artists', []))}")
+        else:
+            print(f"❌ No profile found for user {user_id}")
+        return user_data
+    
+    @staticmethod
+    def update_suggestion_history(user_id, suggested_song):
+        """Track what songs we've suggested to this user"""
+        if user_id in user_profiles:
+            user_profiles[user_id]['song_suggestions_history'].append({
+                'song': suggested_song,
+                'timestamp': datetime.now().isoformat()
             })
     
-    # Sort by composite score in descending order
-    smart_songs.sort(key=lambda x: x['score'], reverse=True)
-    
-    # Extract song strings from sorted results
-    result = [item['song'] for item in smart_songs[:limit]]
-    
-    print(f"Smart selection: Picked {len(result)} songs (popularity range: {smart_songs[0]['popularity'] if smart_songs else 0}-{smart_songs[-1]['popularity'] if smart_songs else 0})")
-    
-    return result
+    @staticmethod
+    def get_personalized_search_terms(user_id, emotion_type):
+        """🎯 Generate personalized search terms based on user preferences"""
+        user_data = user_profiles.get(user_id)
+        
+        if not user_data:
+            print(f"❌ No user data found for personalized search: {user_id}")
+            return None
+        
+        # 🔧 FIX 2: Use correct data structure key
+        preferences = user_data.get('preferences', {})  # ✅ Fixed: was 'music_preferences'
+        
+        if not preferences:
+            print(f"❌ No preferences found for user {user_id}")
+            return None
+        
+        # Base search terms from emotion
+        base_terms = []
+        
+        # Add user's favorite genres
+        top_genres = preferences.get('top_genres', [])[:5]
+        print(f"🎭 User's top genres for {emotion_type}: {top_genres}")
+        
+        for genre in top_genres:
+            base_terms.append(f"{emotion_type} {genre}")
+        
+        # Add user's favorite artists
+        top_artists = preferences.get('favorite_artists', [])[:3]
+        print(f"🎤 User's top artists for {emotion_type}: {top_artists}")
+        
+        for artist in top_artists:
+            base_terms.append(f"songs like {artist}")
+        
+        # Add genre-specific emotional terms
+        if top_genres:
+            main_genre = top_genres[0] if top_genres else 'pop'
+            base_terms.append(f"{emotion_type} {main_genre} music")
+        
+        print(f"🎯 Generated {len(base_terms)} personalized search terms: {base_terms}")
+        return base_terms[:8]  # Return top 8 personalized search terms
 
-def search_specific_genre_smart(genre_info):
-    """
-    Enhanced genre search using intelligent track selection algorithm
-    
-    Args:
-        genre_info (dict): Genre metadata with type and search terms
-        
-    Returns:
-        list: Intelligently selected songs matching the genre
-    """
-    if not SPOTIFY_ENABLED:
-        return []
-    
-    found_tracks = []  # Store track objects for intelligent processing
-    genre_type = genre_info['type']
-    
-    # Optimize search terms for better API efficiency
-    search_terms = genre_info['search_terms'][:6]
-    
-    # Select markets based on genre geographic relevance
-    if genre_type == 'bengali':
-        markets = ['IN', 'US']
-    elif genre_type in ['tamil', 'telugu', 'punjabi', 'hindi_bollywood']:
-        markets = ['IN', 'US']
-    elif genre_type == 'afrobeats':
-        markets = ['NG', 'US']
-    elif genre_type == 'kpop':
-        markets = ['KR', 'US']
-    else:
-        markets = ['US']
-    
-    print(f"Smart genre search: {len(search_terms)} terms in {len(markets)} markets")
-    
-    try:
-        for term in search_terms:
-            for market in markets:
-                try:
-                    results = spotify.search(q=term, type='track', limit=15, market=market)
-                    for track in results['tracks']['items']:
-                        if track and track['popularity'] > 15:
-                            found_tracks.append(track)
-                    
-                    # Early termination for performance
-                    if len(found_tracks) >= 60:
-                        break
-                except Exception as e:
-                    print(f"Error searching {term} in {market}: {e}")
-                    continue
-            
-            if len(found_tracks) >= 60:
-                break
-    
-    except Exception as e:
-        print(f"Smart genre search error: {e}")
-        return []
-    
-    # Apply intelligent selection to track objects
-    return get_smart_songs_from_results(found_tracks, 20)
+# 🎯 Initialize OAuth handler
+try:
+    spotify_auth = SpotifyUserAuth()
+    print("✅ Spotify auth handler initialized successfully")
+except Exception as e:
+    print(f"❌ Error initializing Spotify auth: {e}")
+    # Create a dummy handler so imports don't fail
+    spotify_auth = None
 
-def search_artist_songs_smart(artist_name, limit=15):
-    """
-    Enhanced artist search combining top tracks and catalog search
-    
-    Args:
-        artist_name (str): Name of artist to search for
-        limit (int): Maximum number of songs to return
-        
-    Returns:
-        list: Intelligently selected songs by the artist
-    """
-    if not SPOTIFY_ENABLED:
-        return []
-    
-    found_tracks = []
-    print(f"Smart artist search: {artist_name}")
-    
+def create_user_profile(access_token):
+    """🔍 Create complete user profile from Spotify data"""
     try:
-        # Step 1: Find the most relevant artist by popularity
-        artist_search_results = spotify.search(
-            q=f'artist:"{artist_name}"', 
-            type='artist', 
-            limit=10, 
-            market='US'
-        )
+        analyzer = UserProfileAnalyzer(access_token)
         
-        best_artist = None
-        highest_popularity = 0
+        # Get basic profile
+        profile_data = analyzer.get_user_profile()
+        if not profile_data:
+            print("❌ Failed to get profile data")
+            return None
         
-        for artist in artist_search_results['artists']['items']:
-            artist_popularity = artist.get('popularity', 0)
-            name_match = (
-                artist_name.lower() in artist['name'].lower() or
-                artist['name'].lower() in artist_name.lower()
-            )
-            
-            if name_match and artist_popularity > highest_popularity:
-                highest_popularity = artist_popularity
-                best_artist = artist
+        # Analyze music preferences
+        music_preferences = analyzer.analyze_music_preferences()
+        if not music_preferences:
+            print("❌ Failed to analyze music preferences")
+            return None
         
-        if not best_artist:
-            return []
+        # Save everything
+        user_id = profile_data['id']
+        UserPreferenceManager.save_user_profile(user_id, profile_data, music_preferences)
         
-        selected_artist = best_artist['name']
-        artist_id = best_artist['id']
-        
-        # Step 2: Get top tracks (pre-sorted by popularity)
-        top_tracks = spotify.artist_top_tracks(artist_id, country='US')
-        for track in top_tracks['tracks']:
-            if track and track['popularity'] > 10:
-                found_tracks.append(track)
-        
-        # Step 3: Supplement with additional catalog search if needed
-        if len(found_tracks) < 12:
-            additional_results = spotify.search(
-                q=f'artist:"{selected_artist}"', 
-                type='track', 
-                limit=25, 
-                market='US'
-            )
-            
-            for track in additional_results['tracks']['items']:
-                if (track and 
-                    track['popularity'] > 15 and 
-                    track['artists'][0]['name'] == selected_artist):
-                    found_tracks.append(track)
-                
-                if len(found_tracks) >= 20:
-                    break
-        
-        # Apply intelligent selection to collected tracks
-        return get_smart_songs_from_results(found_tracks, limit)
+        # 🔧 FIX 3: Return consistent structure for immediate use
+        return {
+            'user_id': user_id,
+            'profile': profile_data,
+            'preferences': music_preferences  # ✅ Fixed: consistent with storage
+        }
         
     except Exception as e:
-        print(f"Smart artist search failed: {e}")
-        return []
-
-# Function aliases for backward compatibility
-search_specific_genre = search_specific_genre_smart
-search_artist_songs = search_artist_songs_smart
-get_trending_songs = get_trending_songs_optimized
-
-# Module exports
-__all__ = [
-    'spotify',  # Spotify client instance
-    'get_trending_songs', 
-    'search_spotify_song',
-    'search_specific_genre', 
-    'search_artist_songs',
-    'SPOTIFY_ENABLED'
-]
+        print(f"❌ Error creating user profile: {e}")
+        return None
