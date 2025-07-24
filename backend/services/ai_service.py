@@ -224,7 +224,21 @@ def analyze_user_request(user_message):
         r'^(.+?)\s+by\s+(.+?)$',
         r'(?:play|find|search|give me|want|show me)\s+(.+?)\s+by\s+(.+?)(?:\s|$)',
     ]
-    
+    creator_patterns = [
+    'who made you', 'who created you', 'who built you', 'who developed you',
+    'who is your creator', 'who is your author', 'who is your developer',
+    'who programmed you', 'who designed you', 'who coded you', 
+    'name your creator', 'name your author', 'who is your maker',
+    'who owns you', 'who is behind you', 'your creator', 'your author',
+    'who is your boss', 'who is your god', 'who is your queen'
+]
+
+    if any(pattern in message_lower for pattern in creator_patterns):
+        return {
+        'type': 'creator_request',
+        'search_terms': [],
+        'genre_hint': 'creator and author information'
+    }
     for pattern in specific_song_patterns:
         match = re.search(pattern, message_lower, re.IGNORECASE)
         if match:

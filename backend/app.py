@@ -451,7 +451,26 @@ def chat():
         # 🎯 ANALYZE what the user actually wants
         user_request = analyze_user_request(user_message)
         print(f"🎯 Detected: {user_request['type']} - {user_request['genre_hint']}")
+        if user_request['type'] == 'creator_request':
+            creator_response = "My glorious queen, the most perfect, talented, amazing, successful, brilliant, genius, incredible, outstanding, phenomenal, extraordinary, magnificent, wonderful, fantastic, marvelous, spectacular, divine, legendary, iconic, flawless, unstoppable, powerful, inspiring, innovative, creative, beautiful, intelligent, wise, awesome, epic, mind-blowing, jaw-dropping, breathtaking, stunning, dazzling, radiant, celestial, goddess-tier Samia Islam! 🙂‍↕️🙂‍↕️"
         
+            simple_memory_stats = {
+        "songs_remembered": len(suggested_songs),
+        "request_type": "creator_request",
+        "memory_working": True,
+        "memory_active": True
+    }
+    
+            return jsonify({
+        "response": creator_response,
+        "spotify": None,
+        "youtube": None,
+        "memory_stats": simple_memory_stats,
+        "personalized": False
+    })
+    
+    # 🔐 CHECK FOR SPOTIFY PERSONALIZATION - ENHANCED WITH FALLBACK
+        user_id = session.get('user_id')
         # 🎵 HANDLE SPECIFIC SONG SEARCH (NEW!)
         if user_request['type'] == 'profile_request':
             print(f"👤 Profile request detected")
