@@ -214,7 +214,7 @@ def auth_spotify():
 
 @app.route('/callback')
 def spotify_callback():
-    """Handle Spotify OAuth callback - IMPROVED VERSION"""
+    """Handle Spotify OAuth callback - ENHANCED ERROR HANDLING"""
     try:
         from flask import request, session, redirect
         
@@ -223,6 +223,24 @@ def spotify_callback():
         error = request.args.get('error')
         
         print(f"📥 Callback received - Code: {bool(code)}, State: {state}, Error: {error}")
+        
+        # Check if spotify_auth is available
+        if not spotify_auth:
+            print("❌ Spotify auth handler not initialized")
+            return """
+            <html>
+            <body style="font-family: system-ui; text-align: center; padding: 40px; background: #0a0a0a; color: white;">
+                <h2>❌ Spotify authentication not configured</h2>
+                <p>Please check server configuration.</p>
+                <script>
+                    if (window.opener) {
+                        window.opener.postMessage({type: 'spotify_error', error: 'not_configured'}, '*');
+                    }
+                    window.close();
+                </script>
+            </body>
+            </html>
+            """
         
         if error:
             print(f"❌ Authorization error: {error}")
@@ -338,7 +356,7 @@ def spotify_callback():
         return f"""
         <html>
         <body style="font-family: system-ui; text-align: center; padding: 40px; background: #0a0a0a; color: white;">
-            <h2>❌ Error: {str(e)}</h2>
+            <h2>❌ Server Error: {str(e)}</h2>
             <script>
                 if (window.opener) {{
                     window.opener.postMessage({{type: 'spotify_error', error: 'server_error'}}, '*');
