@@ -23,6 +23,7 @@ from .spotify_service import (
 from .ai_service import (
     analyze_user_request,
     generate_ai_response,
+    generate_ai_response_personalized,
     extract_song_from_response
 )
 

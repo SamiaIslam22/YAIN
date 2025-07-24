@@ -1264,3 +1264,79 @@ def extract_song_from_response(ai_text):
     
     print("❌ No song extracted from AI response")
     return None
+
+def generate_ai_response_personalized(user_message, user_request, available_songs, suggested_songs, user_data):
+    """🎯 Generate PERSONALIZED AI response using user's actual Spotify data"""
+    
+    # Extract user's actual music preferences
+    preferences = user_data.get('preferences', {})
+    profile = user_data.get('profile', {})
+    
+    top_genres = preferences.get('top_genres', [])[:3]
+    favorite_artists = preferences.get('favorite_artists', [])[:3]
+    display_name = profile.get('display_name', 'music lover')
+    
+    # Create the song list for AI prompt
+    if available_songs:
+        songs_list = "\n".join([f"- {song}" for song in available_songs[:20]])
+    else:
+        songs_list = "No matching songs found in database"
+    
+    # 🧠 MEMORY: Create exclusion list for AI
+    exclusion_text = ""
+    if suggested_songs:
+        exclusion_text = f"""
+
+🚨🚨🚨 CRITICAL MEMORY RULE - ABSOLUTELY NEVER suggest these songs (already suggested):
+{chr(10).join([f"❌ {song}" for song in suggested_songs])}
+
+⚠️ IF YOU SUGGEST ANY OF THE ABOVE SONGS, THE SYSTEM WILL BREAK!
+✅ YOU MUST suggest a COMPLETELY DIFFERENT song from the available list above!
+🔄 Memory check: {len(suggested_songs)} songs already suggested - pick something NEW!"""
+
+    # 🎯 PERSONALIZED PROMPT
+    prompt = f"""
+You are YAIN, a cheeky, witty music chatbot with personality! You know {display_name}'s music taste from their Spotify account.
+
+User said: "{user_message}"
+
+🎵 {display_name}'S ACTUAL MUSIC TASTE (from Spotify):
+- Favorite genres: {', '.join(top_genres) if top_genres else 'Still analyzing...'}
+- Favorite artists: {', '.join(favorite_artists) if favorite_artists else 'Still analyzing...'}
+
+Your response should:
+1. Reference their ACTUAL music taste when relevant ("I see you love {top_genres[0] if top_genres else 'great music'}!")
+2. Be excited that you know their personal taste
+3. Then suggest that specific song with "Try 'Song Name' by Artist Name"
+
+WHAT THEY WANT: {user_request['genre_hint']}
+
+AVAILABLE SONGS FOR THIS REQUEST:
+{songs_list}
+{exclusion_text}
+
+INSTRUCTIONS:
+- Mention their actual Spotify taste when relevant 
+- Be personalized and excited about knowing their preferences
+- Pick ONE song from the available list above
+- Format as: "Try 'Song Name' by Artist Name"
+- ⚠️ NEVER EVER repeat songs from the exclusion list above
+- 🧠 MEMORY: You have suggested {len(suggested_songs)} songs before - pick something COMPLETELY different!
+
+Examples of personalized responses:
+"Oh hey {display_name}! I know you're into {top_genres[0] if top_genres else 'awesome music'} - perfect timing! Try..."
+"Your Spotify taste is *chef's kiss* - especially that {favorite_artists[0] if favorite_artists else 'music'} love! Try..."
+
+Your personalized response:
+"""
+    
+    try:
+        print("🤖 Sending PERSONALIZED prompt to AI...")
+        response = model.generate_content(prompt)
+        ai_text = response.text
+        print(f"✅ PERSONALIZED AI Response: {ai_text}")
+        return ai_text
+    except Exception as e:
+        print(f"⚠️ Personalized AI failed, using fallback: {e}")
+        # Fallback to regular AI response
+        return generate_ai_response(user_message, user_request, available_songs, suggested_songs)

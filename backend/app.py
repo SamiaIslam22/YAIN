@@ -14,6 +14,7 @@ from flask import Flask, request, jsonify
 from flask_cors import CORS
 from dotenv import load_dotenv
 from flask import send_from_directory
+from flask import session
 import os
 
 # Import our organized services (NO USER SERVICES)
@@ -28,6 +29,7 @@ from services import (
     analyze_user_request, 
     generate_ai_response, 
     extract_song_from_response,
+    generate_ai_response_personalized, 
     # Memory functions
     filter_trending_songs, 
     create_memory_stats, 
@@ -35,7 +37,7 @@ from services import (
     # YouTube functions
     search_youtube_song, 
     YOUTUBE_ENABLED,
-
+    
     spotify_auth,
     create_user_profile,
     UserPreferenceManager
@@ -412,9 +414,22 @@ def chat():
         memory_validation = validate_memory_system(suggested_songs)
         print(f"🔍 Memory validation: {memory_validation['status']} - {memory_validation['message']}")
         
-        # 🌍 GENERAL MODE ONLY - No personalization
-        is_personalized = False
-        print(f"🌍 General mode (personalization disabled)")
+        # 🔐 CHECK FOR SPOTIFY PERSONALIZATION
+        user_id = session.get('user_id')
+        is_personalized = bool(user_id and session.get('connected', False))
+
+        if is_personalized:
+            print(f"🎯 PERSONALIZED MODE: User {user_id} connected")
+            user_data = UserPreferenceManager.get_user_profile(user_id)
+    
+            if user_data:
+                print(f"📊 User preferences loaded: {len(user_data['preferences']['top_genres'])} genres")
+            else:
+                print(f"⚠️ User data not found, falling back to general mode")
+                is_personalized = False
+        else:
+            print(f"🌍 GENERAL MODE: No Spotify connection")
+            user_data = None
         
         # 🎯 ANALYZE what the user actually wants
         user_request = analyze_user_request(user_message)
@@ -425,7 +440,7 @@ def chat():
             search_query = user_request['search_query']
             available_songs = [search_query]
             print(f"🎯 Targeting specific song: {search_query}")
-            
+
         # 🎤 HANDLE ARTIST SEARCH (NEW!)
         elif user_request['type'] == 'artist_search':
             artist_name = user_request['artist_name']
@@ -434,19 +449,42 @@ def chat():
             print(f"🎵 Found {len(available_songs)} songs by {artist_name}")
             if artist_id:
                 print(f"🎯 Using Spotify Artist ID: {artist_id}")
-            
-        # 🎵 Get songs based on user's specific request
+
+        # 🎵 HANDLE GENRE/MOOD REQUESTS
         elif user_request['type'] != 'general':
-            # User has a specific genre/mood request - prioritize that!
-            available_songs = search_specific_genre(user_request)
-            print(f"🎵 Found {len(available_songs)} songs for {user_request['type']}")
+            # 🎯 PERSONALIZED SEARCH (if user is connected to Spotify)
+            if is_personalized:
+                print(f"🎯 PERSONALIZED SEARCH for {user_request['type']}")
+                
+                # Get personalized search terms based on user's actual Spotify taste
+                personalized_terms = UserPreferenceManager.get_personalized_search_terms(
+                    user_id, user_request['type']
+                )
+                
+                if personalized_terms:
+                    print(f"🎵 Using personalized terms: {personalized_terms}")
+                    # Create enhanced user_request with personalized terms
+                    enhanced_request = user_request.copy()
+                    enhanced_request['search_terms'] = personalized_terms + user_request['search_terms'][:3]
+                    available_songs = search_specific_genre(enhanced_request)
+                    print(f"🎯 Found {len(available_songs)} personalized songs")
+                else:
+                    # Fallback to regular genre search
+                    available_songs = search_specific_genre(user_request)
+                    print(f"🌍 Personalized fallback: Found {len(available_songs)} songs for {user_request['type']}")
+            
+            # 🌍 NON-PERSONALIZED SEARCH (user not connected to Spotify)
+            else:
+                available_songs = search_specific_genre(user_request)
+                print(f"🎵 Found {len(available_songs)} songs for {user_request['type']}")
+
+        # 🌍 GENERAL REQUEST - USE TRENDING SONGS
         else:
-            # General request - use trending songs
             print(f"🌍 Using trending songs for general request")
             trending_songs = get_trending_songs()
             available_songs = trending_songs
             print(f"🔥 Loaded {len(available_songs)} trending songs")
-        
+
         # 🧠 MEMORY: Filter out already suggested songs (UPDATED!)
         original_count = len(available_songs)
         
@@ -463,7 +501,15 @@ def chat():
         
         # 🤖 Generate AI response
         print(f"🤖 Generating AI response...")
-        ai_text = generate_ai_response(user_message, user_request, available_songs, suggested_songs)
+        
+        # NEW: Pass user data to AI for personalized responses
+        if is_personalized and user_data:
+            ai_text = generate_ai_response_personalized(
+                user_message, user_request, available_songs, suggested_songs, user_data
+            )
+        else:
+            ai_text = generate_ai_response(user_message, user_request, available_songs, suggested_songs)
+        
         print(f"✅ AI response: {ai_text}")
         
         # 🔍 Extract song and search both platforms
@@ -563,8 +609,16 @@ def chat():
             "spotify": spotify_data,
             "youtube": youtube_data,
             "memory_stats": memory_stats,
-            "personalized": False,  # Always false in general mode
-            "user_id": None  # Always null in general mode
+            "personalized": is_personalized,  # ✅ NOW SHOWS TRUE when Spotify connected
+            "user_id": user_id if is_personalized else None,  # ✅ Shows actual user ID
+            
+            # 🆕 ADD: User's actual music preferences when connected
+            "user_preferences": {
+                "display_name": user_data['profile']['display_name'] if is_personalized and user_data else None,
+                "top_genres": user_data['preferences']['top_genres'][:5] if is_personalized and user_data else [],
+                "favorite_artists": user_data['preferences']['favorite_artists'][:5] if is_personalized and user_data else [],
+                "personalization_active": is_personalized
+            } if is_personalized else None
         }
         
         print(f"✅ Response ready - Spotify: {bool(spotify_data)}, YouTube: {bool(youtube_data)}")
@@ -589,7 +643,6 @@ def chat():
                 "memory_active": False
             }
         }), 500
-        
 if __name__ == '__main__':
     import os
     port = int(os.environ.get('PORT', 5000))
