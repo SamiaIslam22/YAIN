@@ -15,7 +15,6 @@ from flask_cors import CORS
 from dotenv import load_dotenv
 from flask import send_from_directory
 from flask import session
-from services.user_service import user_profiles
 import os
 
 # Import our organized services (NO USER SERVICES)
@@ -399,6 +398,7 @@ def disconnect_user():
     except Exception as e:
         print(f"❌ Disconnect error: {e}")
         return jsonify({"error": str(e)}), 500
+    
 @app.route('/chat', methods=['POST'])
 def chat():
     """🧠 MAIN CHAT ENDPOINT - NOW WITH WORKING PERSONALIZATION + FALLBACK LOGIC!"""

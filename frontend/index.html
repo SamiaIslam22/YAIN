@@ -1096,16 +1096,16 @@ body {
 }
         
         async function disconnectSpotify() {
-    try {
-        await fetch(`${CONFIG.API_BASE}/user/disconnect`, {
-            credentials: 'include'
-        });
-        updatePersonalizationStatus(false, null);
-        addMessage("Spotify disconnected. I'll use general recommendations now.", false);
-    } catch (error) {
-        console.error('Error disconnecting Spotify:', error);
-    }
-}
+            try {
+                await fetch(`${CONFIG.API_BASE}/user/disconnect`, {
+                    credentials: 'include'
+                });
+                updatePersonalizationStatus(false, null);
+                addMessage("Spotify disconnected. I'll use general recommendations now.", false);
+            } catch (error) {
+                console.error('Error disconnecting Spotify:', error);
+            }
+        }
         
         // Replace the updatePersonalizationStatus function in your index.html with this:
 
@@ -1440,7 +1440,7 @@ function highlightSongs(message) {
         console.log('👀 Window gained focus, checking user status...');
         await checkUserStatus();
     });
-
+    
         // 🌟 Enhanced Ultra Smooth Cursor Trail
         class CursorTrail {
             constructor() {
