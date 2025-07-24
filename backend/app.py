@@ -217,18 +217,17 @@ def auth_spotify():
 
 @app.route('/callback')
 def spotify_callback():
-    """Handle Spotify OAuth callback after user authorization"""
+    """Handle Spotify OAuth callback - ENHANCED ERROR HANDLING"""
     try:
         from flask import request, session, redirect
         
-        # Extract callback parameters
         code = request.args.get('code')
         state = request.args.get('state')  # This is the user_id
         error = request.args.get('error')
         
         print(f"📥 Callback received - Code: {bool(code)}, State: {state}, Error: {error}")
         
-        # Check if spotify authentication handler is available
+        # Check if spotify_auth is available
         if not spotify_auth:
             print("❌ Spotify auth handler not initialized")
             return """
@@ -246,7 +245,6 @@ def spotify_callback():
             </html>
             """
         
-        # Handle authorization errors
         if error:
             print(f"❌ Authorization error: {error}")
             return f"""
@@ -263,7 +261,6 @@ def spotify_callback():
             </html>
             """
         
-        # Validate required parameters
         if not code or not state:
             print("❌ Missing authorization code or state")
             return """
@@ -280,7 +277,7 @@ def spotify_callback():
             </html>
             """
         
-        # Exchange authorization code for access token
+        # Get access token
         print(f"🔄 Getting access token for user {state}...")
         token_info = spotify_auth.get_user_token(code, state)
         
@@ -300,13 +297,13 @@ def spotify_callback():
             </html>
             """
         
-        # Create user profile from Spotify data
+        # Create user profile
         print(f"👤 Creating user profile...")
         access_token = token_info['access_token']
         user_profile = create_user_profile(access_token)
         
         if user_profile:
-            # Store user session data
+            # Store user info in session
             session['user_id'] = user_profile['user_id']
             session['access_token'] = access_token
             session['connected'] = True
@@ -315,7 +312,6 @@ def spotify_callback():
             
             print(f"✅ User connected successfully: {user_profile['profile']['display_name']}")
             
-            # Return success page with JavaScript to notify parent window
             return f"""
             <html>
             <head><title>Spotify Connected</title></head>

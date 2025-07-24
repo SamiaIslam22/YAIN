@@ -5,14 +5,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=5.0">
     <title>Yain - Your AI DJ with Attitude</title>
     <style>
-    /* Global CSS reset and box-sizing */
     * {
         margin: 0;
         padding: 0;
         box-sizing: border-box;
     }
-    
-    /* Fixed footer notice with copyright and licensing information */
     .footer-notice {
         position: fixed;
         bottom: 10px;
@@ -31,14 +28,12 @@
         line-height: 1.3;
         }   
 
-    /* Subfooter text styling for additional information */
     .footer-sub {
         font-size: 0.85em;
         font-weight: 900;
         letter-spacing: 0.2px;
         }
     
-    /* Keyframe animation for glowing pulse effect */
     @keyframes glowPulse {
         0%, 100% {
             text-shadow: 0 0 10px rgba(255, 255, 255, 0.1);
@@ -47,8 +42,6 @@
             text-shadow: 0 0 20px rgba(255, 255, 255, 0.3);
         }
         }
-    
-    /* Main body styling with animated gradient background */
     body {
         font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Helvetica Neue', Arial, sans-serif;
         background: linear-gradient(135deg, #0a0a0a 0%, #1a0a1a 25%, #0a1a1a 50%, #1a1a0a 75%, #0a0a0a 100%);
@@ -62,38 +55,37 @@
         position: relative;
     }
 
-    /* Animation for shifting gradient background */
     @keyframes gradientShift {
         0% { background-position: 0% 50%; }
         50% { background-position: 100% 50%; }
         100% { background-position: 0% 50%; }
     }
 
-    /* Responsive design settings - reset zoom and use smaller base font */
-    body {
-        zoom: 1;
-        font-size: 14px;
-    }
 
-    .header {
-        padding: 12px 25px;
-    }
+body {
+    zoom: 1; 
+    font-size: 14px; 
+}
 
-    .logo {
-        font-size: 2.0em;
-    }
+.header {
+    padding: 12px 25px; 
+}
 
-    .main-container {
-        width: 100vw;
-        max-width: none;
-        padding: 0 15px;
-    }
+.logo {
+    font-size: 2.0em; 
+}
 
-    .sidebar {
-        width: 280px;
-    }
+.main-container {
+    width: 100vw; 
+    max-width: none;
+    padding: 0 15px;
+}
 
-    /* Floating particles background effect using radial gradients */
+.sidebar {
+    width: 280px;
+}
+
+    
     body::before {
         content: '';
         position: fixed;
@@ -113,13 +105,12 @@
         z-index: 1;
     }
 
-    /* Animation for floating particle movement */
     @keyframes float {
         0% { transform: translate(0, 0); }
         100% { transform: translate(-200px, -200px); }
     }
     
-    /* Header section with blur backdrop and shadow effects */
+    /* Header */
     .header {
         background: rgba(15, 15, 15, 0.3);
         border-bottom: 1px solid rgba(255, 255, 255, 0.1);
@@ -130,7 +121,6 @@
         box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
     }
     
-    /* Header content container with flex layout */
     .header-content {
         display: flex;
         justify-content: space-between;
@@ -140,7 +130,7 @@
         position: relative;
     }
 
-    /* Logo styling with animated gradient text and effects */
+    
     .logo {
         display: flex;
         align-items: center;
@@ -160,27 +150,23 @@
         filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.3));
     }
 
-    /* Text gradient animation for logo */
     @keyframes textGradient {
         0% { background-position: 0% 50%; }
         50% { background-position: 100% 50%; }
         100% { background-position: 0% 50%; }
     }
 
-    /* Logo icon with pulsing animation */
     .logo::before {
         content: '🎵';
         filter: drop-shadow(0 0 10px rgba(74, 144, 226, 0.5));
         animation: pulse 2s ease-in-out infinite;
     }
 
-    /* Pulse animation keyframes */
     @keyframes pulse {
         0%, 100% { transform: scale(1); }
         50% { transform: scale(1.1); }
     }
     
-    /* Tagline styling with gradient text effect */
     .tagline {
         color: rgba(255, 255, 255, 0.8);
         font-size: 0.38em;
@@ -194,7 +180,7 @@
         text-transform: uppercase;
     }
     
-    /* Main content container with flex layout */
+    
     .main-container {
         flex: 1;
         display: flex;
@@ -207,7 +193,7 @@
         z-index: 10;
     }
     
-    /* Sidebar with glassmorphism effects and blur backdrop */
+    
     .sidebar {
         width: 320px;
         background: rgba(20, 20, 20, 0.4);
@@ -221,7 +207,6 @@
         position: relative;
     }
 
-    /* Sidebar gradient overlay effect */
     .sidebar::before {
         content: '';
         position: absolute;
@@ -235,7 +220,6 @@
         pointer-events: none;
     }
     
-    /* Personalization status section styling */
     .personalization-status {
         background: linear-gradient(135deg, rgba(26, 26, 26, 0.8), rgba(42, 42, 42, 0.6));
         border: 1px solid rgba(255, 255, 255, 0.2);
@@ -248,7 +232,6 @@
         overflow: hidden;
     }
 
-    /* Rotating conic gradient background effect */
     .personalization-status::before {
         content: '';
         position: absolute;
@@ -261,13 +244,11 @@
         pointer-events: none;
     }
 
-    /* Rotation animation keyframes */
     @keyframes rotate {
         0% { transform: rotate(0deg); }
         100% { transform: rotate(360deg); }
     }
     
-    /* Spotify connect button with gradient background and hover effects */
     .spotify-connect-btn {
         background: linear-gradient(135deg, #0d4f1c 0%, #1a6b2f 25%, #267a3c 50%, #1a6b2f 75%, #0a3d15 100%);
         color: white;
@@ -290,7 +271,6 @@
         overflow: hidden;
     }
 
-    /* Button shine effect on hover */
     .spotify-connect-btn::before {
         content: '';
         position: absolute;
@@ -306,14 +286,12 @@
         left: 100%;
     }
     
-    /* Hover state for Spotify connect button */
     .spotify-connect-btn:hover {
         background: linear-gradient(135deg, #1a6b2f 0%, #267a3c 25%, #32884a 50%, #1a6b2f 75%, #0d4f1c 100%);
         transform: translateY(-3px) scale(1.02);
         box-shadow: 0 15px 40px rgba(26, 107, 47, 0.6);
     }
     
-    /* Spotify disconnect button with red gradient styling */
     .spotify-disconnect-btn {
         background: linear-gradient(135deg, #8b0000 0%, #a52a2a 25%, #cd5c5c 50%, #a52a2a 75%, #660000 100%);
         color: white;
@@ -329,7 +307,6 @@
         box-shadow: 0 6px 20px rgba(139, 0, 0, 0.4);
     }
     
-    /* User info display with Spotify green gradient */
     .user-info {
         background: linear-gradient(135deg, #1DB954, #1aa34a);
         color: white;
@@ -339,7 +316,6 @@
         box-shadow: 0 4px 15px rgba(29, 185, 84, 0.3);
     }
     
-    /* Features list and memory status sections styling */
     .features-list, .memory-status {
         background: rgba(30, 30, 30, 0.3);
         border-radius: 15px;
@@ -350,7 +326,6 @@
         position: relative;
     }
     
-    /* Section headers with gradient text */
     .features-list h3, .memory-status h3 {
         background: linear-gradient(45deg, #4A90E2, #FF6B9D);
         -webkit-background-clip: text;
@@ -361,7 +336,6 @@
         font-weight: 600;
     }
     
-    /* Features list styling */
     .features-list ul {
         list-style: none;
         gap: 8px;
@@ -369,7 +343,6 @@
         flex-direction: column;
     }
     
-    /* Individual feature list items */
     .features-list li {
         color: rgba(255, 255, 255, 0.8);
         font-size: 0.9em;
@@ -378,19 +351,16 @@
         transition: color 0.3s ease;
     }
 
-    /* Hover effect for feature list items */
     .features-list li:hover {
         color: rgba(74, 144, 226, 0.9);
     }
     
-    /* Memory stats container layout */
     .memory-stats {
         display: flex;
         flex-direction: column;
         gap: 10px;
     }
     
-    /* Individual memory stat item layout */
     .memory-stat {
         display: flex;
         justify-content: space-between;
@@ -400,12 +370,10 @@
         font-size: 0.9em;
     }
     
-    /* Memory stat label styling */
     .memory-stat-label {
         color: rgba(255, 255, 255, 0.7);
     }
     
-    /* Memory stat value with gradient text */
     .memory-stat-value {
         background: linear-gradient(45deg, #4A90E2, #FF6B9D);
         -webkit-background-clip: text;
@@ -414,7 +382,7 @@
         font-weight: bold;
     }
     
-    /* Main chat area with glassmorphism effects */
+    /* Enhanced Chat Area */
     .chat-area {
         flex: 1;
         display: flex;
@@ -429,7 +397,6 @@
         position: relative;
     }
 
-    /* Chat area gradient overlay */
     .chat-area::before {
         content: '';
         position: absolute;
@@ -441,7 +408,6 @@
         pointer-events: none;
     }
     
-    /* Chat header styling */
     .chat-header {
         background: rgba(25, 25, 25, 0.6);
         padding: 25px 30px;
@@ -451,7 +417,6 @@
         z-index: 1;
     }
     
-    /* Chat title with gradient text */
     .chat-title {
         font-size: 1.5em;
         font-weight: 600;
@@ -462,14 +427,12 @@
         background-clip: text;
     }
     
-    /* Chat subtitle styling */
     .chat-subtitle {
         color: rgba(255, 255, 255, 0.7);
         font-size: 1em;
         line-height: 1.4;
     }
     
-    /* Messages container with scrollable area */
     .messages {
         flex: 1;
         overflow-y: auto;
@@ -481,7 +444,6 @@
         z-index: 1;
     }
     
-    /* Individual message styling with animation */
     .message {
         padding: 20px 25px;
         border-radius: 20px;
@@ -492,7 +454,6 @@
         backdrop-filter: blur(10px);
     }
     
-    /* Fade in animation for new messages */
     @keyframes fadeInUp {
         from { 
             opacity: 0; 
@@ -504,7 +465,6 @@
         }
     }
     
-    /* User message styling with blue gradient */
     .user-message {
         background: linear-gradient(135deg, rgba(74, 144, 226, 0.8), rgba(53, 122, 189, 0.8));
         margin-left: auto;
@@ -513,7 +473,6 @@
         border: 1px solid rgba(74, 144, 226, 0.3);
     }
     
-    /* Bot message styling with dark gradient */
     .bot-message {
         background: linear-gradient(135deg, rgba(42, 42, 42, 0.8), rgba(26, 26, 26, 0.8));
         margin-right: auto;
@@ -522,14 +481,12 @@
         box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
     }
     
-    /* Personalized message styling with green gradient */
     .personalized-message {
         background: linear-gradient(135deg, rgba(29, 185, 84, 0.8), rgba(26, 163, 74, 0.8));
         border: 1px solid rgba(29, 185, 84, 0.4);
         box-shadow: 0 4px 15px rgba(29, 185, 84, 0.3);
     }
     
-    /* Song title highlighting with gradient text */
     .song-highlight {
         background: linear-gradient(45deg, #4A90E2, #FF6B9D);
         -webkit-background-clip: text;
@@ -538,7 +495,6 @@
         font-weight: 600;
     }
     
-    /* Song card container with hover effects */
     .song-card {
         background: linear-gradient(135deg, rgba(42, 42, 42, 0.8), rgba(26, 26, 26, 0.8));
         border: 1px solid rgba(255, 255, 255, 0.2);
@@ -554,7 +510,6 @@
         overflow: hidden;
     }
 
-    /* Song card shine effect */
     .song-card::before {
         content: '';
         position: absolute;
@@ -570,14 +525,12 @@
         left: 100%;
     }
     
-    /* Song card hover state */
     .song-card:hover {
         transform: translateY(-5px) scale(1.02);
         box-shadow: 0 15px 40px rgba(74, 144, 226, 0.4);
         border-color: rgba(74, 144, 226, 0.6);
     }
     
-    /* Song album art image styling */
     .song-image {
         width: 80px;
         height: 80px;
@@ -587,17 +540,14 @@
         transition: transform 0.3s ease;
     }
 
-    /* Song image hover effect */
     .song-card:hover .song-image {
         transform: scale(1.05);
     }
     
-    /* Song information container */
     .song-info {
         flex: 1;
     }
     
-    /* Song title with gradient text */
     .song-title {
         font-weight: 600;
         background: linear-gradient(45deg, #4A90E2, #FF6B9D);
@@ -608,20 +558,17 @@
         font-size: 1.1em;
     }
     
-    /* Song artist name styling */
     .song-artist {
         color: rgba(255, 255, 255, 0.7);
         font-size: 0.95em;
     }
     
-    /* Music platform buttons container */
     .music-buttons {
         display: flex;
         gap: 12px;
         flex-wrap: wrap;
     }
     
-    /* Base styling for music platform buttons */
     .spotify-button, .youtube-button {
         padding: 12px 24px;
         border-radius: 50px;
@@ -639,7 +586,6 @@
         overflow: hidden;
     }
 
-    /* Button shine effect for both platform buttons */
     .spotify-button::before, .youtube-button::before {
         content: '';
         position: absolute;
@@ -655,33 +601,29 @@
         left: 100%;
     }
     
-    /* Spotify button styling with green gradient */
     .spotify-button {
         background: linear-gradient(135deg, #0d4f1c 0%, #1a6b2f 50%, #0a3d15 100%);
         box-shadow: 0 8px 25px rgba(13, 79, 28, 0.4);
     }
     
-    /* Spotify button hover effect */
     .spotify-button:hover {
         background: linear-gradient(135deg, #1a6b2f 0%, #32884a 50%, #0d4f1c 100%);
         transform: translateY(-3px) scale(1.05);
         box-shadow: 0 12px 35px rgba(26, 107, 47, 0.6);
     }
     
-    /* YouTube button styling with red gradient */
     .youtube-button {
         background: linear-gradient(135deg, #8b0000 0%, #cd5c5c 50%, #660000 100%);
         box-shadow: 0 8px 25px rgba(139, 0, 0, 0.4);
     }
     
-    /* YouTube button hover effect */
     .youtube-button:hover {
         background: linear-gradient(135deg, #a52a2a 0%, #dc143c 50%, #4d0000 100%);
         transform: translateY(-3px) scale(1.05);
         box-shadow: 0 12px 35px rgba(165, 42, 42, 0.6);
     }
     
-    /* Input area at bottom of chat */
+    /* Enhanced Input Area */
     .input-area {
         background: rgba(25, 25, 25, 0.6);
         padding: 25px 30px;
@@ -691,7 +633,6 @@
         z-index: 1;
     }
     
-    /* Input container with flex layout */
     .input-container {
         display: flex;
         gap: 15px;
@@ -699,7 +640,6 @@
         max-width: 1000px;
     }
     
-    /* Message input field styling */
     #messageInput {
         flex: 1;
         padding: 20px 25px;
@@ -713,7 +653,6 @@
         backdrop-filter: blur(10px);
     }
     
-    /* Input field focus state */
     #messageInput:focus {
         border-color: rgba(74, 144, 226, 0.8);
         background: rgba(50, 50, 50, 0.8);
@@ -721,12 +660,10 @@
         transform: scale(1.02);
     }
     
-    /* Input placeholder text styling */
     #messageInput::placeholder {
         color: rgba(255, 255, 255, 0.5);
     }
     
-    /* Send button with animated gradient background */
     #sendButton {
         padding: 20px 40px;
         background: linear-gradient(135deg, #4A90E2 0%, #5ba0f2 25%, #FF6B9D 50%, #ff7bb5 75%, #357ABD 100%);
@@ -746,7 +683,6 @@
         overflow: hidden;
     }
 
-    /* Send button shine effect */
     #sendButton::before {
         content: '';
         position: absolute;
@@ -762,26 +698,22 @@
         left: 100%;
     }
     
-    /* Send button hover state */
     #sendButton:hover {
         background: linear-gradient(135deg, #5ba0f2 0%, #6bb0ff 25%, #ff7bb5 50%, #ff8cc5 75%, #4080cd 100%);
         transform: translateY(-4px) scale(1.05);
         box-shadow: 0 15px 40px rgba(74, 144, 226, 0.6);
     }
     
-    /* Send button active state */
     #sendButton:active {
         transform: translateY(-2px) scale(1.02);
     }
     
-    /* Send button disabled state */
     #sendButton:disabled {
         opacity: 0.7;
         cursor: not-allowed;
         transform: none;
     }
     
-    /* Send button gradient animation */
     @keyframes sendButtonGradient {
         0% { background-position: 0% 50%; }
         33% { background-position: 100% 25%; }
@@ -789,7 +721,7 @@
         100% { background-position: 0% 50%; }
     }
     
-    /* Custom scrollbar styling for messages and sidebar */
+    /* Enhanced Scrollbar */
     .messages::-webkit-scrollbar, .sidebar::-webkit-scrollbar {
         width: 10px;
     }
@@ -805,7 +737,7 @@
         box-shadow: 0 0 10px rgba(74, 144, 226, 0.5);
     }
     
-    /* Cursor trail effect container */
+    /* Enhanced Cursor Trail Effect */
     .cursor-trail {
         position: fixed;
         top: 0;
@@ -817,13 +749,11 @@
         overflow: hidden;
     }
     
-    /* SVG container for cursor trail */
     .cursor-trail svg {
         width: 100%;
         height: 100%;
     }
     
-    /* Main cursor trail line styling */
     .trail-line {
         fill: none;
         stroke: url(#neonGradient);
@@ -835,7 +765,6 @@
         transition: opacity 0.4s ease;
     }
     
-    /* Cursor trail glow effect */
     .trail-glow {
         fill: none;
         stroke: url(#neonGradient);
@@ -846,14 +775,14 @@
         opacity: 0.3;
     }
     
-    /* Hide cursor trail on mobile devices */
+  
     @media (max-width: 768px) {
         .cursor-trail {
             display: none;
         }
     }
 
-    /* Responsive design for large screens */
+    /* Enhanced Responsive Design */
     @media (max-width: 1200px) {
         .main-container {
             padding: 0 20px;
@@ -864,7 +793,6 @@
         }
     }
     
-    /* Responsive design for medium screens */
     @media (max-width: 968px) {
         .main-container {
             flex-direction: column;
@@ -883,7 +811,6 @@
         }
     }
     
-    /* Responsive design for mobile screens */
     @media (max-width: 768px) {
         .header {
             padding: 15px 20px;
@@ -917,7 +844,7 @@
 </style>
 </head>
 <body>
-    <!-- SVG cursor trail with neon gradient effect -->
+    <!-- Enhanced Cursor Trail -->
     <div class="cursor-trail">
         <svg>
             <defs>
@@ -933,14 +860,11 @@
             <path class="trail-line" d=""></path>
         </svg>
     </div>
-    
-    <!-- Copyright and licensing notice -->
     <div class="footer-notice">
         🔐 YAIN by Samia Islam<br>
         <span class="footer-sub">For demo use only — No commercial use allowed</span>
     </div>
-    
-    <!-- Main header with logo -->
+    <!-- Enhanced Header -->
     <div class="header">
         <div class="header-content">
             <div class="logo">
@@ -950,11 +874,11 @@
         </div>
     </div>
 
-    <!-- Main application container -->
+    <!-- Main Container -->
     <div class="main-container">
-        <!-- Sidebar with user status and features -->
+        <!-- Enhanced Sidebar -->
         <div class="sidebar">
-            <!-- Spotify connection status section -->
+            <!-- Personalization Status -->
             <div class="personalization-status" id="personalizationStatus">
                 <div id="spotifyStatus">
                     <p>🎯 <strong>Connect your Spotify for personalized recommendations!</strong></p>
@@ -967,7 +891,7 @@
                 </div>
             </div>
 
-            <!-- Memory system status display -->
+            <!-- Memory Status -->
             <div class="memory-status" id="memoryStatus">
                 <h3>🧠 Memory System</h3>
                 <div class="memory-stats" id="memoryStats">
@@ -986,7 +910,7 @@
                 </div>
             </div>
 
-            <!-- Application features list -->
+            <!-- Features -->
             <div class="features-list">
                 <h3>💅🏼 What I Can Do</h3>
                 <ul>
@@ -1001,22 +925,22 @@
             </div>
         </div>
 
-        <!-- Main chat interface -->
+        <!-- Enhanced Chat Area -->
         <div class="chat-area">
-            <!-- Chat header with title and subtitle -->
+            <!-- Chat Header -->
             <div class="chat-header">
                 <div class="chat-title">How are you feeling today?</div>
                 <div class="chat-subtitle">Tell me your mood and I'll find the perfect song for you! 🎵</div>
             </div>
 
-            <!-- Messages display area -->
+            <!-- Messages -->
             <div class="messages" id="messages">
                 <div class="message bot-message">
                     Hey! I'm Yain 🎵 What's your emotional damage today?
                 </div>
             </div>
 
-            <!-- User input area with text field and send button -->
+            <!-- Enhanced Input Area -->
             <div class="input-area">
                 <div class="input-container">
                     <input type="text" id="messageInput" placeholder="Type how you're feeling..." />
@@ -1027,41 +951,38 @@
     </div>
     
     <script>
-        /* DOM element references */
         const messagesDiv = document.getElementById('messages');
         const messageInput = document.getElementById('messageInput');
         const sendButton = document.getElementById('sendButton');
         
-        /* Application configuration - API endpoint */
         const CONFIG = {
-    API_BASE: 'https://yain.onrender.com'  // Your actual Render URL
+    API_BASE: 'https://yain.onrender.com' 
 };
         
-        /* Memory system - tracks songs that have been suggested to avoid repetition */
+        // 🧠 MEMORY SYSTEM: Track ACTUAL returned songs, not AI suggestions
         let suggestedSongs = [];
         
-        /* Personalization state - tracks Spotify connection status */
+        // 🔐 PERSONALIZATION: Track user connection status
         let isPersonalized = false;
         let currentUser = null;
         
-        /* Memory statistics tracking */
+        // 📊 Memory statistics
         let memoryStats = {
             songsRemembered: 0,
             lastRequestType: 'None',
             memoryActive: true
         };
         
-        /* Check user connection status on page load */
+        // Check if user is already connected on page load
         checkUserStatus();
         
-        /* Check if user is already connected to Spotify */
         async function checkUserStatus() {
     console.log('🔍 Checking if user is already connected...');
     try {
         const response = await fetch(`${CONFIG.API_BASE}/user/profile`, {
-            credentials: 'include',  /* Include session cookies */
+            credentials: 'include',  // ✅ IMPORTANT: Include credentials
             headers: {
-                'Cache-Control': 'no-cache'  /* Prevent caching issues */
+                'Cache-Control': 'no-cache'  // ✅ Prevent caching issues
             }
         });
         
@@ -1072,16 +993,16 @@
             console.log('✅ User connected:', userData.profile.display_name);
             console.log('📊 User data:', userData);
             
-            /* Check if this is a new connection (wasn't connected before) */
+            // Check if this is a new connection (wasn't connected before)
             const wasConnected = isPersonalized;
             updatePersonalizationStatus(true, userData);
             
-            /* If this is a new connection, show success message */
+            // If this is a new connection, show success message
             if (!wasConnected) {
                 addMessage("🎉 Spotify connected! I now know your music taste and will give you personalized recommendations!", false, null, null, true);
             }
             
-            return true; /* Return success status */
+            return true; // ✅ Return success status
         } else {
             console.log('👤 User not connected:', response.status);
             updatePersonalizationStatus(false, null);
@@ -1094,7 +1015,6 @@
 }
 
         
-        /* Initiate Spotify OAuth connection process */
         async function connectSpotify() {
     console.log('🎵 Starting Spotify connection...');
     
@@ -1105,10 +1025,10 @@
         const data = await response.json();
         
         if (data.auth_url) {
-            /* Show loading message to user */
+            // Show loading message
             addMessage("🔄 Opening Spotify authorization...", false);
             
-            /* Open Spotify auth in new popup window */
+            // Open Spotify auth in new window
             const authWindow = window.open(
                 data.auth_url, 
                 'spotify_auth', 
@@ -1120,9 +1040,9 @@
                 return;
             }
             
-            /* Monitor popup window closure */
+            // Check if window is closed periodically
             let attempts = 0;
-            const maxAttempts = 300; /* 5 minutes timeout */
+            const maxAttempts = 300; // 5 minutes
             
             const checkClosed = setInterval(async () => {
                 attempts++;
@@ -1132,10 +1052,10 @@
                         console.log('🪟 Auth window closed, checking status...');
                         clearInterval(checkClosed);
                         
-                        /* Give time for callback processing */
+                        // Give some time for the callback to process
                         addMessage("🔄 Verifying connection...", false);
                         
-                        /* Retry status check multiple times with increasing delays */
+                        // Try multiple times with increasing delays
                         for (let i = 0; i < 5; i++) {
                             await new Promise(resolve => setTimeout(resolve, 1000 * (i + 1)));
                             
@@ -1148,7 +1068,7 @@
                             }
                         }
                         
-                        /* All attempts failed */
+                        // If all attempts failed
                         console.log('❌ All status check attempts failed');
                         addMessage("⚠️ Connection might have failed. Please try again if you don't see your profile.", false);
                         return;
@@ -1157,7 +1077,7 @@
                     console.log('Error checking window status:', error);
                 }
                 
-                /* Stop checking after timeout */
+                // Stop checking after max attempts
                 if (attempts >= maxAttempts) {
                     console.log('⏰ Timeout: Stopping auth window check');
                     clearInterval(checkClosed);
@@ -1174,7 +1094,6 @@
     }
 }
         
-        /* Disconnect from Spotify and clear session */
         async function disconnectSpotify() {
             try {
                 await fetch(`${CONFIG.API_BASE}/user/disconnect`, {
@@ -1187,7 +1106,8 @@
             }
         }
         
-        /* Update the personalization status display in sidebar */
+        // Replace the updatePersonalizationStatus function in your index.html with this:
+
 function updatePersonalizationStatus(connected, userData = null) {
     const statusDiv = document.getElementById('spotifyStatus');
     
@@ -1211,7 +1131,6 @@ function updatePersonalizationStatus(connected, userData = null) {
         const displayName = profile.display_name || 'User';
         const followerCount = profile.followers || 0;
         
-        /* Display connected user information */
         statusDiv.innerHTML = `
             <div class="user-info">
                 <div style="display: flex; align-items: center; gap: 15px; margin-bottom: 15px;">
@@ -1256,7 +1175,6 @@ function updatePersonalizationStatus(connected, userData = null) {
         console.log('✅ UI updated to show connected state');
     } else {
         console.log('🎨 Updating UI to show disconnected state');
-        /* Display connection prompt */
         statusDiv.innerHTML = `
             <p>🎯 <strong>Connect your Spotify for personalized recommendations!</strong></p>
             <button class="spotify-connect-btn" onclick="connectSpotify()">
@@ -1269,35 +1187,35 @@ function updatePersonalizationStatus(connected, userData = null) {
     }
 }
         
-        /* Update memory statistics display in sidebar */
         function updateMemoryDisplay() {
             document.getElementById('songsRemembered').textContent = memoryStats.songsRemembered;
             document.getElementById('lastRequestType').textContent = memoryStats.lastRequestType;
             document.getElementById('memoryActive').textContent = memoryStats.memoryActive ? '✅' : '❌';
         }
         
-        /* Highlight song titles in bot messages with gradient styling */
+        // Replace your highlightSongs function in index.html with this fixed version:
+
 function highlightSongs(message) {
     console.log("🎨 Highlighting songs in:", message);
     
-    /* Regex patterns to match various song suggestion formats */
+    // Enhanced patterns to catch more song suggestion formats
     const patterns = [
-        /* "Try 'Song with "quotes" inside' by Artist" - handles nested quotes */
+        // "Try 'Song with "quotes" inside' by Artist" - handles nested quotes
         /([Tt]ry)\s+['"]([^'"]*(?:"[^"]*"[^'"]*)*?)['"] (by) ([^.!?\n🎵🎶]+?)(?=[\s]*[.!?\n🎵🎶]|$)/gi,
         
-        /* "Try Song Name by Artist" - without quotes */
+        // "Try Song Name by Artist" - without quotes
         /([Tt]ry)\s+([^'"][^"]*?) (by) ([^.!?\n🎵🎶]+?)(?=[\s]*[.!?\n🎵🎶]|$)/gi,
         
-        /* "'Song' by Artist" - standalone with quotes */
+        // "'Song' by Artist" - standalone with quotes
         /(?:^|[^a-zA-Z])(['"])([^'"]+?)\1\s+(by)\s+([^.!?\n🎵🎶]+?)(?=[\s]*[.!?\n🎵🎶]|$)/gi,
         
-        /* "Check out 'Song' by Artist" */
+        // "Check out 'Song' by Artist"
         /([Cc]heck out)\s+['"]([^'"]+?)['"] (by) ([^.!?\n🎵🎶]+?)(?=[\s]*[.!?\n🎵🎶]|$)/gi,
         
-        /* "Listen to 'Song' by Artist" */
+        // "Listen to 'Song' by Artist"
         /([Ll]isten to)\s+['"]([^'"]+?)['"] (by) ([^.!?\n🎵🎶]+?)(?=[\s]*[.!?\n🎵🎶]|$)/gi,
         
-        /* "Go with 'Song' by Artist" */
+        // "Go with 'Song' by Artist"
         /([Gg]o with)\s+['"]([^'"]+?)['"] (by) ([^.!?\n🎵🎶]+?)(?=[\s]*[.!?\n🎵🎶]|$)/gi
     ];
     
@@ -1314,10 +1232,10 @@ function highlightSongs(message) {
         });
         
         result = result.replace(pattern, (match, prefix, song, byWord, artist) => {
-            /* Clean up artist name by removing trailing punctuation and descriptive words */
+            // Enhanced artist name cleanup
             let cleanArtist = artist.trim();
             
-            /* Remove trailing punctuation and emojis */
+            // Remove trailing punctuation and emojis
             cleanArtist = cleanArtist.replace(/[.!?🎵🎶🇯🇲🇧🇩🇮🇳🌍–—,-]+.*$/, '');
             cleanArtist = cleanArtist.replace(/\s+(it's|that's|sweet|reggae|perfection|vibes|music|hits|pure|total|absolute|epic|energy|feels|mood|guaranteed|instant|serious|major).*$/i, '');
             cleanArtist = cleanArtist.trim();
@@ -1335,12 +1253,11 @@ function highlightSongs(message) {
     return result;
 }
         
-        /* Create song card component with Spotify and YouTube links */
         function createSongCard(spotifyData, youtubeData) {
             const songCard = document.createElement('div');
             songCard.className = 'song-card';
             
-            /* Use Spotify data for main info, fallback to YouTube */
+            // Use Spotify data for main info, fallback to YouTube
             const songInfo = spotifyData || youtubeData;
             if (!songInfo) return null;
             
@@ -1349,7 +1266,6 @@ function highlightSongs(message) {
             const albumInfo = spotifyData ? spotifyData.album : '';
             const imageUrl = spotifyData ? spotifyData.image_url : youtubeData.thumbnail_url;
             
-            /* Build song card HTML with image, info, and platform buttons */
             songCard.innerHTML = `
                 ${imageUrl ? `<img src="${imageUrl}" alt="Album art" class="song-image">` : ''}
                 <div class="song-info">
@@ -1365,33 +1281,32 @@ function highlightSongs(message) {
             return songCard;
         }
         
-        /* Add new message to chat with styling and song card if applicable */
         function addMessage(message, isUser = false, spotifyData = null, youtubeData = null, isPersonalized = false) {
             const messageDiv = document.createElement('div');
             messageDiv.className = `message ${isUser ? 'user-message' : 'bot-message'}`;
             
-            /* Add personalized styling if this was a personalized response */
+            // 🔐 Add personalized styling if this was a personalized response
             if (isPersonalized && !isUser) {
                 messageDiv.classList.add('personalized-message');
             }
             
             if (!isUser) {
-                /* Highlight song titles for bot messages */
+                // Highlight song titles for bot messages
                 messageDiv.innerHTML = highlightSongs(message);
                 
-                /* Track actual returned song in memory system to avoid repetition */
+                // 🧠 CRITICAL FIX: Track ACTUAL returned song, not AI suggestion
                 if (spotifyData || youtubeData) {
                     const actualSong = spotifyData 
                         ? `'${spotifyData.name}' by ${spotifyData.artist}`
                         : `'${youtubeData.title}' by ${youtubeData.channel}`;
                         
-                    /* Only add to memory if it's not already there */
+                    // Only add to memory if it's not already there
                     if (!suggestedSongs.includes(actualSong)) {
                         suggestedSongs.push(actualSong);
                         console.log(`🎵 Remembered ACTUAL song: ${actualSong}`);
                         console.log(`📚 Total songs remembered: ${suggestedSongs.length}`);
                         
-                        /* Update memory stats display */
+                        // Update memory stats
                         memoryStats.songsRemembered = suggestedSongs.length;
                         updateMemoryDisplay();
                     } else {
@@ -1399,7 +1314,7 @@ function highlightSongs(message) {
                     }
                 }
                 
-                /* Add song card if we have platform data */
+                // Add song card if we have Spotify or YouTube data
                 if (spotifyData || youtubeData) {
                     const songCard = createSongCard(spotifyData, youtubeData);
                     if (songCard) {
@@ -1410,12 +1325,10 @@ function highlightSongs(message) {
                 messageDiv.textContent = message;
             }
             
-            /* Add message to chat and scroll to bottom */
             messagesDiv.appendChild(messageDiv);
             messagesDiv.scrollTop = messagesDiv.scrollHeight;
         }
         
-        /* Send user message to backend and handle response */
         async function sendMessage() {
             const message = messageInput.value.trim();
             if (!message) return;
@@ -1423,7 +1336,7 @@ function highlightSongs(message) {
             addMessage(message, true);
             messageInput.value = '';
             
-            /* Show loading state */
+            // Show loading state
             sendButton.textContent = 'Sending...';
             sendButton.disabled = true;
             
@@ -1431,7 +1344,7 @@ function highlightSongs(message) {
                 console.log(`🧠 Sending memory: ${suggestedSongs.length} songs`);
                 console.log(`🧠 Memory contents:`, suggestedSongs);
                 
-                /* Send message with memory to backend */
+                // 🧠 MEMORY: Send previously suggested songs to backend
                 const response = await fetch(`${CONFIG.API_BASE}/chat`, {
                     method: 'POST',
                     headers: {
@@ -1439,9 +1352,9 @@ function highlightSongs(message) {
                     },
                     body: JSON.stringify({ 
                         message: message,
-                        suggested_songs: suggestedSongs  /* Send memory to avoid repetition */
+                        suggested_songs: suggestedSongs  // 🧠 Send memory!
                     }),
-                    credentials: 'include'  /* Include session cookies for personalization */
+                    credentials: 'include'  // 🔐 Include session cookies for personalization
                 });
                 
                 if (!response.ok) {
@@ -1450,10 +1363,10 @@ function highlightSongs(message) {
                 
                 const data = await response.json();
                 
-                /* Check if response was personalized */
+                // 🔐 Check if response was personalized
                 const responsePersonalized = data.personalized || false;
                 
-                /* Update memory statistics from backend response */
+                // 📊 Update memory statistics
                 if (data.memory_stats) {
                     memoryStats.lastRequestType = data.memory_stats.request_type || 'Unknown';
                     memoryStats.memoryActive = data.memory_stats.memory_working !== false;
@@ -1474,13 +1387,13 @@ function highlightSongs(message) {
                 console.error('Chat error:', error);
                 addMessage(`Sorry, I had trouble connecting to the backend! Please make sure it's running on ${CONFIG.API_BASE}`, false);
             } finally {
-                /* Reset button state */
+                // Reset button state
                 sendButton.textContent = 'Send';
                 sendButton.disabled = false;
             }
         }
         
-        /* Event listeners for user interaction */
+        // Event listeners
         sendButton.addEventListener('click', sendMessage);
         messageInput.addEventListener('keypress', (e) => {
             if (e.key === 'Enter' && !e.shiftKey) {
@@ -1489,13 +1402,11 @@ function highlightSongs(message) {
             }
         });
 
-        /* Auto-focus input field on page load */
+        // Auto-focus input on load
         messageInput.focus();
         
-        /* Initialize memory display */
+        // Initialize memory display
         updateMemoryDisplay();
-        
-        /* Listen for messages from Spotify OAuth popup window */
         window.addEventListener('message', async (event) => {
         console.log('📨 Received message from popup:', event.data);
         
@@ -1518,19 +1429,18 @@ function highlightSongs(message) {
         }
     });
 
-    /* Check user status when page loads */
+    // 🔥 ADD THESE EVENT LISTENERS TOO 🔥
     document.addEventListener('DOMContentLoaded', async () => {
         console.log('📄 Page loaded, checking for existing connection...');
         await checkUserStatus();
     });
 
-    /* Check user status when window regains focus */
     window.addEventListener('focus', async () => {
         console.log('👀 Window gained focus, checking user status...');
         await checkUserStatus();
     });
     
-        /* Enhanced cursor trail effect class */
+        // 🌟 Enhanced Ultra Smooth Cursor Trail
         class CursorTrail {
             constructor() {
                 this.points = [];
@@ -1545,16 +1455,15 @@ function highlightSongs(message) {
                 this.init();
             }
             
-            /* Initialize cursor trail event listeners */
             init() {
-                /* Track mouse movement */
+                // Track mouse movement
                 document.addEventListener('mousemove', (e) => {
                     this.mouse.x = e.clientX;
                     this.mouse.y = e.clientY;
                     this.isMoving = true;
                 });
                 
-                /* Hide trail when mouse stops moving */
+                // Enhanced hide trail when mouse stops
                 let timeout;
                 document.addEventListener('mousemove', () => {
                     clearTimeout(timeout);
@@ -1567,18 +1476,16 @@ function highlightSongs(message) {
                     }, 400);
                 });
                 
-                /* Start animation loop */
+                // Start animation loop
                 this.animate();
             }
             
-            /* Smoothly interpolate mouse position */
             updateSmoothMouse() {
                 const lerp = 0.6;
                 this.smoothMouse.x += (this.mouse.x - this.smoothMouse.x) * lerp;
                 this.smoothMouse.y += (this.mouse.y - this.smoothMouse.y) * lerp;
             }
             
-            /* Update trail points array */
             updatePoints() {
                 this.updateSmoothMouse();
                 
@@ -1607,7 +1514,6 @@ function highlightSongs(message) {
                 });
             }
             
-            /* Create smooth curved path for trail */
             createSilkySmoothPath(points) {
                 if (points.length < 2) return '';
                 if (points.length === 2) {
@@ -1641,7 +1547,6 @@ function highlightSongs(message) {
                 return path;
             }
             
-            /* Draw the cursor trail */
             drawTrail() {
                 if (this.points.length < 2) return;
                 
@@ -1655,7 +1560,6 @@ function highlightSongs(message) {
                 this.trailGlow.style.opacity = (0.3 * fadeOpacity).toString();
             }
             
-            /* Main animation loop */
             animate() {
                 this.updatePoints();
                 this.drawTrail();
@@ -1663,12 +1567,12 @@ function highlightSongs(message) {
             }
         }
         
-        /* Initialize cursor trail only on desktop devices */
+        // Initialize enhanced cursor trail only on desktop
         if (window.innerWidth > 768) {
             new CursorTrail();
         }
         
-        /* Display welcome message after page load */
+        // 🎵 Welcome message with system info
         setTimeout(() => {
             addMessage(`🎵 Drop your mood, I'll drop the beat`, false);
         }, 1000);

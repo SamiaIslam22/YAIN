@@ -30,24 +30,34 @@ SPOTIFY_SCOPE = [
 # 🗄️ In-memory user storage (replace with database later)
 user_profiles = {}
 
+# Fix the SpotifyUserAuth class in user_service.py
+
+# Fix the SpotifyUserAuth class in user_service.py
+
 class SpotifyUserAuth:
     """🔐 Handle Spotify OAuth and user authentication"""
     
-    # In user_service.py - CORRECT
-def __init__(self):
-    self.client_id = os.getenv('SPOTIFY_CLIENT_ID')
-    self.client_secret = os.getenv('SPOTIFY_CLIENT_SECRET')
+    def __init__(self):  # ✅ PROPERLY INDENTED UNDER CLASS
+        self.client_id = os.getenv('SPOTIFY_CLIENT_ID')
+        self.client_secret = os.getenv('SPOTIFY_CLIENT_SECRET')
+        
+        # 🔧 FIX: Correct redirect URI for both dev and production
+        if os.getenv('ENVIRONMENT') == 'production' or 'render.com' in os.getenv('RENDER_EXTERNAL_URL', ''):
+            self.redirect_uri = 'https://yain.onrender.com/callback'
+        else:
+            self.redirect_uri = 'http://localhost:5000/callback'
+        
+        print(f"🔗 Using redirect URI: {self.redirect_uri}")
+        print(f"🔑 Client ID: {'✅ Set' if self.client_id else '❌ Missing'}")
+        print(f"🔒 Client Secret: {'✅ Set' if self.client_secret else '❌ Missing'}")
     
-    # 🔧 FIX: Correct redirect URI for both dev and production
-    if os.getenv('ENVIRONMENT') == 'production' or 'render.com' in os.getenv('RENDER_EXTERNAL_URL', ''):
-        self.redirect_uri = 'https://yain.onrender.com/callback'
-    else:
-        self.redirect_uri = 'http://localhost:5000/callback'  # Port 5000, not 8080
-    
-    print(f"🔗 Using redirect URI: {self.redirect_uri}")
     def get_auth_url(self, user_id):
         """Get Spotify authorization URL for user"""
         try:
+            if not self.client_id or not self.client_secret:
+                print("❌ Missing Spotify credentials!")
+                return None
+                
             sp_oauth = SpotifyOAuth(
                 client_id=self.client_id,
                 client_secret=self.client_secret,
@@ -58,6 +68,7 @@ def __init__(self):
             )
             
             auth_url = sp_oauth.get_authorize_url()
+            print(f"✅ Generated auth URL: {auth_url[:50]}...")
             return auth_url
             
         except Exception as e:
@@ -76,12 +87,12 @@ def __init__(self):
             )
             
             token_info = sp_oauth.get_access_token(code)
+            print(f"✅ Token obtained for user: {user_id}")
             return token_info
             
         except Exception as e:
             print(f"❌ Error getting access token: {e}")
             return None
-
 class UserProfileAnalyzer:
     """🎭 Analyze user's Spotify profile and extract music preferences"""
     
@@ -335,6 +346,24 @@ except Exception as e:
     # Create a dummy handler so imports don't fail
     spotify_auth = None
 
+def initialize_spotify_auth():
+    """Initialize Spotify auth handler with error handling"""
+    try:
+        auth_handler = SpotifyUserAuth()
+        if not auth_handler.client_id or not auth_handler.client_secret:
+            print("❌ Spotify credentials missing - auth disabled")
+            return None
+        print("✅ Spotify auth handler initialized successfully")
+        return auth_handler
+    except Exception as e:
+        print(f"❌ Error initializing Spotify auth: {e}")
+        return None
+
+spotify_auth = initialize_spotify_auth()
+
+# 🎯 Initialize OAuth handler
+spotify_auth = initialize_spotify_auth()
+
 def create_user_profile(access_token):
     """🔍 Create complete user profile from Spotify data"""
     try:
@@ -356,13 +385,15 @@ def create_user_profile(access_token):
         user_id = profile_data['id']
         UserPreferenceManager.save_user_profile(user_id, profile_data, music_preferences)
         
-        # 🔧 FIX 3: Return consistent structure for immediate use
+        # Return consistent structure for immediate use
         return {
             'user_id': user_id,
             'profile': profile_data,
-            'preferences': music_preferences  # ✅ Fixed: consistent with storage
+            'preferences': music_preferences
         }
         
     except Exception as e:
         print(f"❌ Error creating user profile: {e}")
+        import traceback
+        traceback.print_exc()
         return None
