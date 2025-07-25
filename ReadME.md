@@ -1,3 +1,6 @@
+<img width="1322" height="652" alt="image" src="https://github.com/user-attachments/assets/c637a41b-e948-4eaf-b769-03faa9d6cd7f" />
+
+
 # 🎧 YAIN - Your AI DJ with Attitude
 
 YAIN is a mood-based music recommender that combines Spotify, YouTube, and Gemini AI to suggest songs that match your vibe. Just tell Yain how you feel, and it'll drop a perfect track—never repeats, always hits. 🔥
