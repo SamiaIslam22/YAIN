@@ -957,11 +957,7 @@ body {
         
         // Update the CONFIG object:
 const CONFIG = {
-    API_BASE: window.location.hostname.includes('railway.app') 
-        ? 'https://yain.up.railway.app'
-        : window.location.hostname.includes('render.com')
-        ? 'https://yain.onrender.com'
-        : 'http://localhost:5000'  // for local development
+    API_BASE: 'https://yain.onrender.com'  // Back to Render
 };
         
         // 🧠 MEMORY SYSTEM: Track ACTUAL returned songs, not AI suggestions

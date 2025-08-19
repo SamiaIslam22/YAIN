@@ -51,16 +51,13 @@ app = Flask(__name__)
 CORS(app, 
      origins=[
          "http://localhost:3000", 
-         "https://yain.onrender.com",      # Keep existing Render
-         "https://yain.up.railway.app",    # Add Railway URL
-         "https://*.railway.app",          # Railway wildcard
+         "https://yain.onrender.com",  # Keep Render
          "http://localhost:5000", 
          "http://127.0.0.1:5000"
      ], 
      supports_credentials=True,
      allow_headers=["Content-Type", "Authorization", "Cache-Control"],
      methods=["GET", "POST", "OPTIONS"])
-
 # Set secret key for session management
 app.secret_key = os.getenv('FLASK_SECRET_KEY', 'a0bd5d3d53829ba6afe0b193bff1ae3a58ca87e20aa78ffc71a5fb82033bd4ee')
 

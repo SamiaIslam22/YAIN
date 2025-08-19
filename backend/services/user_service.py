@@ -41,8 +41,9 @@ class SpotifyUserAuth:
         self.client_id = os.getenv('SPOTIFY_CLIENT_ID')
         self.client_secret = os.getenv('SPOTIFY_CLIENT_SECRET')
     
-        if os.getenv('ENVIRONMENT') == 'production':
-            self.redirect_uri = 'https://yain.up.railway.app/callback'
+    # 🔧 Render URL for production
+        if os.getenv('ENVIRONMENT') == 'production' or 'render.com' in os.getenv('RENDER_EXTERNAL_URL', ''):
+            self.redirect_uri = 'https://yain.onrender.com/callback'
         else:
             self.redirect_uri = 'http://localhost:5000/callback'
     
