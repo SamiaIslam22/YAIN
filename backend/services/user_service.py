@@ -16,7 +16,7 @@ import json
 import time
 from datetime import datetime, timedelta
 
-# 🔐 Spotify OAuth Configuration
+# 🔐 Spotify OAuth Configuration - UPDATED WITH CURRENTLY PLAYING SCOPES
 SPOTIFY_SCOPE = [
     'user-read-private',           # Read user profile
     'user-read-email',             # Read user email
@@ -25,14 +25,12 @@ SPOTIFY_SCOPE = [
     'playlist-read-private',       # Read private playlists
     'playlist-read-collaborative', # Read collaborative playlists
     'user-read-recently-played',   # Read listening history
+    'user-read-currently-playing', # ✅ NEW: Read current track
+    'user-read-playback-state',    # ✅ NEW: Read playback info
 ]
 
 # 🗄️ In-memory user storage (replace with database later)
 user_profiles = {}
-
-# Fix the SpotifyUserAuth class in user_service.py
-
-# Fix the SpotifyUserAuth class in user_service.py
 
 class SpotifyUserAuth:
     """🔐 Handle Spotify OAuth and user authentication"""
@@ -40,13 +38,13 @@ class SpotifyUserAuth:
     def __init__(self):
         self.client_id = os.getenv('SPOTIFY_CLIENT_ID')
         self.client_secret = os.getenv('SPOTIFY_CLIENT_SECRET')
-    
-    # 🔧 Render URL for production
+        
+        # 🔧 Render URL for production
         if os.getenv('ENVIRONMENT') == 'production' or 'render.com' in os.getenv('RENDER_EXTERNAL_URL', ''):
             self.redirect_uri = 'https://yain.onrender.com/callback'
         else:
             self.redirect_uri = 'http://localhost:5000/callback'
-    
+        
         print(f"🔗 Using redirect URI: {self.redirect_uri}")
     
     def get_auth_url(self, user_id):
@@ -91,6 +89,7 @@ class SpotifyUserAuth:
         except Exception as e:
             print(f"❌ Error getting access token: {e}")
             return None
+
 class UserProfileAnalyzer:
     """🎭 Analyze user's Spotify profile and extract music preferences"""
     
@@ -111,6 +110,29 @@ class UserProfileAnalyzer:
             }
         except Exception as e:
             print(f"❌ Error getting user profile: {e}")
+            return None
+    
+    def get_currently_playing(self):
+        """🎵 NEW: Get user's currently playing track"""
+        try:
+            current_track = self.spotify.current_user_playing_track()
+            
+            if current_track and current_track.get('item'):
+                track = current_track['item']
+                return {
+                    'name': track['name'],
+                    'artist': track['artists'][0]['name'],
+                    'album': track['album']['name'],
+                    'image_url': track['album']['images'][0]['url'] if track['album']['images'] else None,
+                    'spotify_url': track['external_urls']['spotify'],
+                    'progress_ms': current_track.get('progress_ms', 0),
+                    'duration_ms': track.get('duration_ms', 0),
+                    'is_playing': current_track.get('is_playing', False)
+                }
+            return None
+            
+        except Exception as e:
+            print(f"❌ Error getting currently playing: {e}")
             return None
     
     def get_top_artists(self, time_range='medium_term', limit=50):
@@ -260,10 +282,9 @@ class UserPreferenceManager:
     @staticmethod
     def save_user_profile(user_id, profile_data, music_preferences):
         """Save user profile and music preferences"""
-        # 🔧 FIX 1: Use consistent naming - 'preferences' not 'music_preferences'
         user_profiles[user_id] = {
             'profile': profile_data,
-            'preferences': music_preferences,  # ✅ Fixed: consistent naming
+            'preferences': music_preferences,
             'last_updated': datetime.now().isoformat(),
             'song_suggestions_history': []  # Track what we've suggested
         }
@@ -303,8 +324,7 @@ class UserPreferenceManager:
             print(f"❌ No user data found for personalized search: {user_id}")
             return None
         
-        # 🔧 FIX 2: Use correct data structure key
-        preferences = user_data.get('preferences', {})  # ✅ Fixed: was 'music_preferences'
+        preferences = user_data.get('preferences', {})
         
         if not preferences:
             print(f"❌ No preferences found for user {user_id}")
@@ -335,15 +355,6 @@ class UserPreferenceManager:
         print(f"🎯 Generated {len(base_terms)} personalized search terms: {base_terms}")
         return base_terms[:8]  # Return top 8 personalized search terms
 
-# 🎯 Initialize OAuth handler
-try:
-    spotify_auth = SpotifyUserAuth()
-    print("✅ Spotify auth handler initialized successfully")
-except Exception as e:
-    print(f"❌ Error initializing Spotify auth: {e}")
-    # Create a dummy handler so imports don't fail
-    spotify_auth = None
-
 # 🎯 Initialize OAuth handler with error handling
 def initialize_spotify_auth():
     """Initialize Spotify auth handler with proper error handling"""
@@ -362,7 +373,7 @@ def initialize_spotify_auth():
 spotify_auth = initialize_spotify_auth()
 
 def create_user_profile(access_token):
-    """🔍 Create complete user profile from Spotify data"""
+    """🔍 Create complete user profile from Spotify data - UPDATED WITH CURRENTLY PLAYING"""
     try:
         analyzer = UserProfileAnalyzer(access_token)
         
@@ -371,6 +382,10 @@ def create_user_profile(access_token):
         if not profile_data:
             print("❌ Failed to get profile data")
             return None
+        
+        # 🎵 NEW: Get currently playing track
+        currently_playing = analyzer.get_currently_playing()
+        print(f"🎵 Currently playing: {currently_playing['name'] if currently_playing else 'Nothing'}")
         
         # Analyze music preferences
         music_preferences = analyzer.analyze_music_preferences()
@@ -382,11 +397,12 @@ def create_user_profile(access_token):
         user_id = profile_data['id']
         UserPreferenceManager.save_user_profile(user_id, profile_data, music_preferences)
         
-        # Return consistent structure for immediate use
+        # Return consistent structure for immediate use - UPDATED
         return {
             'user_id': user_id,
             'profile': profile_data,
-            'preferences': music_preferences
+            'preferences': music_preferences,
+            'currently_playing': currently_playing  # ✅ NEW: Include currently playing
         }
         
     except Exception as e:

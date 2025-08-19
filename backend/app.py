@@ -376,13 +376,14 @@ def spotify_callback():
 
 @app.route('/user/profile')
 def get_user_profile():
-    """Retrieve current user's Spotify profile and preferences"""
+    """🎵 UPDATED: Retrieve current user's Spotify profile with currently playing"""
     try:
         from flask import session
         
         print(f"🔍 Profile request - Session data: {dict(session)}")
         
         user_id = session.get('user_id')
+        access_token = session.get('access_token')
         connected = session.get('connected', False)
         
         # Validate user authentication
@@ -392,13 +393,45 @@ def get_user_profile():
         
         # Try to get profile from session cache first for faster response
         if 'profile_data' in session:
-            print(f"⚡ Returning cached profile data for {user_id}")
-            return jsonify(session['profile_data'])
+            print(f"⚡ Using cached profile data for {user_id}")
+            user_data = session['profile_data']
+            
+            # 🎵 NEW: Refresh currently playing with live access token
+            if access_token:
+                try:
+                    from services.user_service import UserProfileAnalyzer
+                    analyzer = UserProfileAnalyzer(access_token)
+                    currently_playing = analyzer.get_currently_playing()
+                    user_data['currently_playing'] = currently_playing
+                    
+                    if currently_playing:
+                        print(f"🎵 Currently playing: {currently_playing['name']} by {currently_playing['artist']}")
+                        print(f"▶️ Is playing: {currently_playing['is_playing']}")
+                    else:
+                        print(f"🔇 Not currently playing anything")
+                        
+                except Exception as e:
+                    print(f"⚠️ Could not refresh currently playing: {e}")
+                    user_data['currently_playing'] = None
+            
+            return jsonify(user_data)
         
         # Fallback to persistent storage
         user_data = UserPreferenceManager.get_user_profile(user_id)
         if user_data:
             print(f"💾 Returning stored profile data for {user_id}")
+            
+            # 🎵 NEW: Also refresh currently playing for stored profiles
+            if access_token:
+                try:
+                    from services.user_service import UserProfileAnalyzer
+                    analyzer = UserProfileAnalyzer(access_token)
+                    currently_playing = analyzer.get_currently_playing()
+                    user_data['currently_playing'] = currently_playing
+                except Exception as e:
+                    print(f"⚠️ Could not refresh currently playing: {e}")
+                    user_data['currently_playing'] = None
+            
             session['profile_data'] = user_data
             return jsonify(user_data)
         else:
