@@ -37,25 +37,16 @@ user_profiles = {}
 class SpotifyUserAuth:
     """🔐 Handle Spotify OAuth and user authentication"""
     
-    # In user_service.py - Update the __init__ method:
-def __init__(self):
-    self.client_id = os.getenv('SPOTIFY_CLIENT_ID')
-    self.client_secret = os.getenv('SPOTIFY_CLIENT_SECRET')
+    def __init__(self):
+        self.client_id = os.getenv('SPOTIFY_CLIENT_ID')
+        self.client_secret = os.getenv('SPOTIFY_CLIENT_SECRET')
     
-    # 🆕 Railway URL detection
-    railway_url = os.getenv('RAILWAY_PUBLIC_DOMAIN')
-    render_url = os.getenv('RENDER_EXTERNAL_URL', '')
+        if os.getenv('ENVIRONMENT') == 'production':
+            self.redirect_uri = 'https://yain.up.railway.app/callback'
+        else:
+            self.redirect_uri = 'http://localhost:5000/callback'
     
-    if railway_url:
-        self.redirect_uri = f'https://{railway_url}/callback'
-    elif 'railway.app' in os.getenv('RAILWAY_STATIC_URL', ''):
-        self.redirect_uri = 'https://yain.up.railway.app/callback'  # Your actual Railway URL
-    elif 'render.com' in render_url:
-        self.redirect_uri = 'https://yain.onrender.com/callback'
-    else:
-        self.redirect_uri = 'http://localhost:5000/callback'
-    
-    print(f"🔗 Using redirect URI: {self.redirect_uri}")
+        print(f"🔗 Using redirect URI: {self.redirect_uri}")
     
     def get_auth_url(self, user_id):
         """Get Spotify authorization URL for user"""
