@@ -49,7 +49,14 @@ app = Flask(__name__)
 
 # Configure CORS for cross-origin requests from frontend
 CORS(app, 
-     origins=["http://localhost:3000", "https://yain.onrender.com", "http://localhost:5000", "http://127.0.0.1:5000"], 
+     origins=[
+         "http://localhost:3000", 
+         "https://yain.onrender.com",      # Keep existing Render
+         "https://yain.up.railway.app",    # Add Railway URL
+         "https://*.railway.app",          # Railway wildcard
+         "http://localhost:5000", 
+         "http://127.0.0.1:5000"
+     ], 
      supports_credentials=True,
      allow_headers=["Content-Type", "Authorization", "Cache-Control"],
      methods=["GET", "POST", "OPTIONS"])

@@ -955,8 +955,13 @@ body {
         const messageInput = document.getElementById('messageInput');
         const sendButton = document.getElementById('sendButton');
         
-        const CONFIG = {
-    API_BASE: 'https://yain.onrender.com' 
+        // Update the CONFIG object:
+const CONFIG = {
+    API_BASE: window.location.hostname.includes('railway.app') 
+        ? 'https://yain.up.railway.app'
+        : window.location.hostname.includes('render.com')
+        ? 'https://yain.onrender.com'
+        : 'http://localhost:5000'  // for local development
 };
         
         // 🧠 MEMORY SYSTEM: Track ACTUAL returned songs, not AI suggestions
