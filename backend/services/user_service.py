@@ -343,8 +343,9 @@ except Exception as e:
     # Create a dummy handler so imports don't fail
     spotify_auth = None
 
+# 🎯 Initialize OAuth handler with error handling
 def initialize_spotify_auth():
-    """Initialize Spotify auth handler with error handling"""
+    """Initialize Spotify auth handler with proper error handling"""
     try:
         auth_handler = SpotifyUserAuth()
         if not auth_handler.client_id or not auth_handler.client_secret:
@@ -356,9 +357,7 @@ def initialize_spotify_auth():
         print(f"❌ Error initializing Spotify auth: {e}")
         return None
 
-spotify_auth = initialize_spotify_auth()
-
-# 🎯 Initialize OAuth handler
+# Single initialization
 spotify_auth = initialize_spotify_auth()
 
 def create_user_profile(access_token):
